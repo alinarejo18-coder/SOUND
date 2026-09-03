@@ -1,0 +1,391 @@
+<?php
+require_once "includes/auth.php";
+require_once "config/db.php";
+requireLogin();
+
+$site_info_query = mysqli_query($conn, "SELECT * FROM website_info LIMIT 1");
+$site_info = mysqli_fetch_assoc($site_info_query);
+$nav_genres = [];
+$nav_genre_q = mysqli_query($conn, "SELECT * FROM genres ORDER BY genre_name ASC");
+if ($nav_genre_q) {
+    while ($genre = mysqli_fetch_assoc($nav_genre_q)) {
+        $nav_genres[] = $genre;
+    }
+}
+
+$user_id = $_SESSION['user_id'];
+$video_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$message = "";
+$error = "";
+
+if ($video_id === 0) {
+    die("Invalid video ID.");
+}
+
+// Handle Rating & Review Submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (isset($_POST['rating'])) {
+        $rating = intval($_POST['rating']);
+        if ($rating >= 1 && $rating <= 5) {
+            // Check if already rated using prepared statement
+            $check_stmt = mysqli_prepare($conn, "SELECT id FROM ratings WHERE user_id = ? AND video_id = ?");
+            mysqli_stmt_bind_param($check_stmt, "ii", $user_id, $video_id);
+            mysqli_stmt_execute($check_stmt);
+            $check_result = mysqli_stmt_get_result($check_stmt);
+            
+            if (mysqli_num_rows($check_result) > 0) {
+                // Update existing rating
+                $update_stmt = mysqli_prepare($conn, "UPDATE ratings SET rating = ? WHERE user_id = ? AND video_id = ?");
+                mysqli_stmt_bind_param($update_stmt, "iii", $rating, $user_id, $video_id);
+                mysqli_stmt_execute($update_stmt);
+                $message = "Rating updated successfully!";
+                mysqli_stmt_close($update_stmt);
+            } else {
+                // Insert new rating
+                $insert_stmt = mysqli_prepare($conn, "INSERT INTO ratings (user_id, video_id, rating) VALUES (?, ?, ?)");
+                mysqli_stmt_bind_param($insert_stmt, "iii", $user_id, $video_id, $rating);
+                mysqli_stmt_execute($insert_stmt);
+                $message = "Rating submitted successfully!";
+                mysqli_stmt_close($insert_stmt);
+            }
+            mysqli_stmt_close($check_stmt);
+        } else {
+            $error = "Rating must be between 1 and 5.";
+        }
+    }
+
+    if (isset($_POST['review'])) {
+        $review = trim($_POST['review']);
+        if (!empty($review)) {
+            // Check if review already exists using prepared statement
+            $check_rev_stmt = mysqli_prepare($conn, "SELECT id FROM reviews WHERE user_id = ? AND video_id = ?");
+            mysqli_stmt_bind_param($check_rev_stmt, "ii", $user_id, $video_id);
+            mysqli_stmt_execute($check_rev_stmt);
+            $check_rev_result = mysqli_stmt_get_result($check_rev_stmt);
+            
+            if (mysqli_num_rows($check_rev_result) > 0) {
+                // Update existing review
+                $update_rev_stmt = mysqli_prepare($conn, "UPDATE reviews SET review = ? WHERE user_id = ? AND video_id = ?");
+                mysqli_stmt_bind_param($update_rev_stmt, "sii", $review, $user_id, $video_id);
+                if (mysqli_stmt_execute($update_rev_stmt)) {
+                    $message = "Review updated successfully!";
+                } else {
+                    $error = "Failed to update review.";
+                }
+                mysqli_stmt_close($update_rev_stmt);
+            } else {
+                // Insert new review
+                $insert_rev_stmt = mysqli_prepare($conn, "INSERT INTO reviews (user_id, video_id, review) VALUES (?, ?, ?)");
+                mysqli_stmt_bind_param($insert_rev_stmt, "iis", $user_id, $video_id, $review);
+                if (mysqli_stmt_execute($insert_rev_stmt)) {
+                    $message = "Review submitted successfully!";
+                } else {
+                    $error = "Failed to submit review.";
+                }
+                mysqli_stmt_close($insert_rev_stmt);
+            }
+            mysqli_stmt_close($check_rev_stmt);
+        } else {
+            $error = "Review cannot be empty.";
+        }
+    }
+}
+
+// Fetch Video Details
+$query = "
+    SELECT v.*, 
+           a.artist_name AS artist_name, 
+           al.album_name AS album_name, 
+           g.genre_name AS genre_name, 
+           l.language_name AS language_name, 
+           y.year_value AS year_name 
+    FROM videos v
+    LEFT JOIN artists a ON v.artist_id = a.id
+    LEFT JOIN albums al ON v.album_id = al.id
+    LEFT JOIN genres g ON v.genre_id = g.id
+    LEFT JOIN languages l ON v.language_id = l.id
+    LEFT JOIN years y ON v.year_id = y.id
+    WHERE v.id = ?
+";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $video_id);
+mysqli_stmt_execute($stmt);
+$video_result = mysqli_stmt_get_result($stmt);
+
+if (mysqli_num_rows($video_result) == 0) {
+    die("Video not found.");
+}
+$video = mysqli_fetch_assoc($video_result);
+$youtube_id = '';
+if (preg_match('/^youtube:([A-Za-z0-9_-]+)$/', (string)$video['video_file'], $youtube_match)) {
+    $youtube_id = $youtube_match[1];
+}
+$itunes_preview_url = preg_match('/^https?:\/\//i', (string)$video['video_file'])
+    ? (string)$video['video_file']
+    : '';
+$itunes_video_preview_url = strncmp((string)$video['video_file'], 'itunes-video:', 13) === 0
+    ? substr((string)$video['video_file'], 13)
+    : '';
+$itunes_track_only = strncmp((string)$video['video_file'], 'itunes:', 7) === 0;
+$unsupported_external_media = preg_match('/^[a-z][a-z0-9+.-]*:/i', (string)$video['video_file']) === 1;
+$video_extension = strtolower(pathinfo((string)$video['video_file'], PATHINFO_EXTENSION));
+$video_mime_types = ['mp4' => 'video/mp4', 'm4v' => 'video/mp4', 'webm' => 'video/webm', 'ogg' => 'video/ogg'];
+$video_mime_type = $video_mime_types[$video_extension] ?? 'video/mp4';
+$video_filename = basename((string)$video['video_file']);
+$video_directory = is_file(__DIR__ . '/uploads/videos/files/' . $video_filename)
+    ? 'uploads/videos/files/'
+    : 'uploads/videos/';
+$artwork_src = (string)($video['image'] ?? '');
+if ($artwork_src !== '' && !preg_match('/^https?:\/\//i', $artwork_src)) {
+    $artwork_src = 'uploads/videos/images/' . $artwork_src;
+}
+
+// Fetch average rating using prepared statement
+$avg_stmt = mysqli_prepare($conn, "SELECT AVG(rating) as avg_rating, COUNT(id) as total_ratings FROM ratings WHERE video_id = ?");
+mysqli_stmt_bind_param($avg_stmt, "i", $video_id);
+mysqli_stmt_execute($avg_stmt);
+$avg_data = mysqli_fetch_assoc(mysqli_stmt_get_result($avg_stmt));
+$avg_rating = $avg_data['avg_rating'] ? round($avg_data['avg_rating'], 1) : 0;
+$total_ratings = $avg_data['total_ratings'];
+mysqli_stmt_close($avg_stmt);
+
+// Fetch user's current rating using prepared statement
+$my_rating_stmt = mysqli_prepare($conn, "SELECT rating FROM ratings WHERE user_id = ? AND video_id = ?");
+mysqli_stmt_bind_param($my_rating_stmt, "ii", $user_id, $video_id);
+mysqli_stmt_execute($my_rating_stmt);
+$my_rating_result = mysqli_stmt_get_result($my_rating_stmt);
+$my_rating = (mysqli_num_rows($my_rating_result) > 0) ? mysqli_fetch_assoc($my_rating_result)['rating'] : 0;
+mysqli_stmt_close($my_rating_stmt);
+
+// Fetch user's current review using prepared statement
+$my_rev_stmt = mysqli_prepare($conn, "SELECT review FROM reviews WHERE user_id = ? AND video_id = ?");
+mysqli_stmt_bind_param($my_rev_stmt, "ii", $user_id, $video_id);
+mysqli_stmt_execute($my_rev_stmt);
+$my_rev_result = mysqli_stmt_get_result($my_rev_stmt);
+$my_review = (mysqli_num_rows($my_rev_result) > 0) ? mysqli_fetch_assoc($my_rev_result)['review'] : '';
+mysqli_stmt_close($my_rev_stmt);
+
+// Fetch all reviews for this video
+$reviews_query = "
+    SELECT r.review, r.created_at, u.name 
+    FROM reviews r 
+    JOIN users u ON r.user_id = u.id 
+    WHERE r.video_id = $video_id 
+    ORDER BY r.created_at DESC
+";
+$reviews_result = mysqli_query($conn, $reviews_query);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($video['title']); ?> - SOUND</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
+    <style>
+        body { background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; }
+        .play-container { max-width: 100%; margin: 0 auto; padding: 20px; }
+
+        /* Video Player */
+        .video-player-wrapper { width: 100%; background: #000; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .video-player-wrapper video { width: 100%; display: block; max-height: 500px; }
+        .itunes-preview-stage { min-height: 520px; padding: 36px 24px 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; background: radial-gradient(circle at center, #27202d 0%, #101017 65%, #08080c 100%); box-sizing: border-box; }
+        .itunes-preview-artwork { width: min(100%, 360px); aspect-ratio: 1; object-fit: cover; border-radius: 12px; box-shadow: 0 18px 45px rgba(0,0,0,.55); }
+        .itunes-preview-copy { width: min(100%, 560px); text-align: center; }
+        .itunes-preview-copy h2 { margin: 0 0 6px; color: #F8FAFC; font-size: 24px; }
+        .itunes-preview-copy p { margin: 0 0 18px; color: #A1A1AA; }
+        .itunes-preview-audio { width: min(100%, 560px); }
+
+        /* Media Info */
+        .media-info { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
+        .info-wrapper h1 { font-size: 24px; margin-bottom: 10px; color: var(--accent-pink, #ec4899); }
+        .meta-tags { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .meta-tag { background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; font-size: 14px; color: #fff; }
+        .description-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-top: 15px; line-height: 1.6; color: #ccc; }
+
+        /* Rate & Review Form */
+        .interaction-section { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 30px; }
+        .form-panel { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 40px; }
+        .form-panel h3 { color: #fff; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #fff; }
+        .form-control { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-family: inherit; font-size: 0.95rem; resize: vertical; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-control::placeholder { color: rgba(255,255,255,0.35); }
+        .form-control:focus { border-color: #06b6d4; box-shadow: 0 0 0 2px rgba(6,182,212,0.2); }
+
+        /* Star Rating Select */
+        .star-rating-ui label { color: #fff; display: block; margin-bottom: 8px; font-weight: 500; }
+        .star-rating-ui select { padding: 10px; width: 100%; border-radius: 8px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.95rem; cursor: pointer; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .star-rating-ui select:focus { border-color: #06b6d4; box-shadow: 0 0 0 2px rgba(6,182,212,0.2); }
+
+        /* Submit Button */
+        .btn-submit { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
+        .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        /* User Reviews */
+        .reviews-section { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 25px; margin-bottom: 40px; }
+        .reviews-section h3 { color: #fff; margin-bottom: 20px; font-size: 1.2rem; }
+        .reviews-list { margin-top: 10px; }
+        .review-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); padding: 15px 18px; border-radius: 12px; margin-bottom: 12px; }
+        .review-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #aaa; }
+        .review-author { font-weight: 600; color: #fff; }
+        .review-text { color: #ccc; font-size: 0.95rem; line-height: 1.6; }
+
+        /* Misc */
+        .alert { padding: 12px; border-radius: 8px; margin-bottom: 20px; }
+        .alert-success { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .nav-back { display: inline-block; margin-bottom: 20px; color: #aaa; text-decoration: none; }
+        .nav-back:hover { color: #fff; }
+
+        @media(min-width: 768px) {
+            .media-info { padding: 25px; }
+            .info-wrapper h1 { font-size: 32px; }
+            .description-box { padding: 20px; }
+            .interaction-section { grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
+            .form-panel { padding: 25px; }
+        }
+        /* Red + green media-player theme override */
+        body { background: #0B0B0F !important; color: #F8FAFC !important; }
+        .video-player-wrapper { border: 1px solid rgba(255,255,255,.1); }
+        .media-info, .form-panel, .reviews-section, .review-card { background: #15151C !important; border-color: #27272A !important; }
+        .info-wrapper h1 { color: #EC4899 !important; }
+        .meta-tag { background: #1B1B24 !important; color: #F8FAFC !important; }
+        .description-box { background: #101017 !important; color: #A1A1AA !important; }
+        .form-panel h3, .form-group label, .reviews-section h3, .review-author { color: #F8FAFC !important; }
+        .form-control, .star-rating-ui select { background: #111118 !important; color: #F8FAFC !important; border-color: #27272A !important; }
+        .form-control:focus, .star-rating-ui select:focus { border-color: #8B5CF6 !important; box-shadow: 0 0 0 3px rgba(139,92,246,.17) !important; }
+        .btn-submit { background: linear-gradient(135deg,#8B5CF6,#EC4899) !important; color: #ffffff !important; }
+        .nav-back:hover { color: #8B5CF6 !important; }
+    </style>
+</head>
+<body>
+
+    
+    <div class="main-wrapper">
+
+    <?php include 'includes/navbar.php'; ?>
+
+<div class="play-container">
+    <?php if ($message): ?>
+        <div class="alert alert-success"><?php echo $message; ?></div>
+    <?php endif; ?>
+
+    <!-- Media Player -->
+    <div class="video-player-wrapper">
+        <?php if ($youtube_id): ?>
+            <div style="position:relative; aspect-ratio:16/9; background:#000;">
+                <iframe src="https://www.youtube.com/embed/<?php echo htmlspecialchars($youtube_id); ?>" title="Video player" style="position:absolute; inset:0; width:100%; height:100%; border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+        <?php elseif ($itunes_video_preview_url): ?>
+            <video controls preload="metadata" playsinline poster="<?php echo htmlspecialchars($artwork_src); ?>" style="width:100%; display:block; max-height:500px;">
+                <source src="<?php echo htmlspecialchars($itunes_video_preview_url); ?>" type="video/mp4">
+                Your browser does not support video playback.
+            </video>
+        <?php elseif ($itunes_preview_url): ?>
+            <div class="itunes-preview-stage">
+                <?php if ($artwork_src): ?>
+                    <img class="itunes-preview-artwork" src="<?php echo htmlspecialchars($artwork_src); ?>" alt="<?php echo htmlspecialchars($video['title']); ?> album artwork">
+                <?php endif; ?>
+                <div class="itunes-preview-copy">
+                    <h2><?php echo htmlspecialchars($video['title']); ?></h2>
+                    <p><?php echo htmlspecialchars($video['artist_name'] ?? 'Unknown Artist'); ?><?php if ($video['album_name']): ?> &middot; <?php echo htmlspecialchars($video['album_name']); ?><?php endif; ?></p>
+                    <audio class="itunes-preview-audio" controls preload="metadata" src="<?php echo htmlspecialchars($itunes_preview_url); ?>">
+                        <source src="<?php echo htmlspecialchars($itunes_preview_url); ?>" type="audio/mp4">
+                        Your browser does not support audio playback.
+                    </audio>
+                </div>
+            </div>
+        <?php elseif ($itunes_track_only): ?>
+            <div style="padding:40px 20px; text-align:center; color:#A1A1AA;">No iTunes preview is available for this track.</div>
+        <?php elseif ($unsupported_external_media): ?>
+            <div style="padding:40px 20px; text-align:center; color:#A1A1AA;">This external media is no longer available. iTunes previews are audio-only.</div>
+        <?php else: ?>
+            <video controls poster="uploads/videos/images/<?php echo htmlspecialchars($video['image']); ?>">
+                <source src="<?php echo htmlspecialchars($video_directory . $video_filename); ?>" type="<?php echo $video_mime_type; ?>">
+                Your browser does not support the video element.
+            </video>
+        <?php endif; ?>
+    </div>
+
+    <!-- Video Info -->
+    <div class="media-info">
+        <div class="info-wrapper">
+            <h1><?php echo htmlspecialchars($video['title']); ?></h1>
+            <div class="meta-tags">
+                <span class="meta-tag"><i data-lucide="mic-2" class="icon-ui"></i> <?php echo htmlspecialchars($video['artist_name'] ?? 'Unknown'); ?></span>
+                <?php if ($video['album_name']): ?><span class="meta-tag"><i data-lucide="disc-3" class="icon-ui"></i> <?php echo htmlspecialchars($video['album_name']); ?></span><?php endif; ?>
+                <?php if ($video['genre_name']): ?><span class="meta-tag"><i data-lucide="audio-lines" class="icon-ui"></i> <?php echo htmlspecialchars($video['genre_name']); ?></span><?php endif; ?>
+                <?php if ($video['year_name']): ?><span class="meta-tag"><i data-lucide="calendar-days" class="icon-ui"></i> <?php echo htmlspecialchars($video['year_name']); ?></span><?php endif; ?>
+            </div>
+            
+            <div style="font-size: 18px; margin-bottom: 10px;">
+                <i data-lucide="star" class="icon-ui"></i> <?php echo $avg_rating; ?>/5 <span style="font-size:14px; color:#aaa;">(<?php echo $total_ratings; ?> ratings)</span>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <?php if ($video['description']): ?>
+        <div class="description-box">
+            <h4 style="margin-bottom:8px; color: #fff;">Description</h4>
+            <?php echo nl2br(htmlspecialchars($video['description'])); ?>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Interaction (Rate & Review) -->
+    <div class="form-panel">
+        <h3>Rate & Review this Video</h3>
+        <form method="POST">
+            <div class="interaction-section">
+                <!-- Rate -->
+                <div class="form-group star-rating-ui">
+                    <label>Your Rating (1 to 5 Stars)</label>
+                    <select name="rating" required>
+                        <option value="5" <?php echo ($my_rating==5)?'selected':''; ?>>5 / 5</option>
+                        <option value="4" <?php echo ($my_rating==4)?'selected':''; ?>>4 / 5</option>
+                        <option value="3" <?php echo ($my_rating==3)?'selected':''; ?>>3 / 5</option>
+                        <option value="2" <?php echo ($my_rating==2)?'selected':''; ?>>2 / 5</option>
+                        <option value="1" <?php echo ($my_rating==1)?'selected':''; ?>>1 / 5</option>
+                    </select>
+                </div>
+                <!-- Write Review -->
+                <div class="form-group">
+                    <label>Your Review</label>
+                    <textarea name="review" class="form-control" rows="3" placeholder="What did you think of this video?" required><?php echo htmlspecialchars($my_review); ?></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn-submit">Submit Rating & Review</button>
+        </form>
+    </div>
+
+    <!-- User Reviews -->
+    <div class="reviews-section">
+        <h3>User Reviews</h3>
+        <div class="reviews-list">
+            <?php if (mysqli_num_rows($reviews_result) > 0): ?>
+                <?php while ($rev = mysqli_fetch_assoc($reviews_result)): ?>
+                    <div class="review-card">
+                        <div class="review-header">
+                            <span class="review-author"><?php echo htmlspecialchars($rev['name']); ?></span>
+                            <span><?php echo date('M d, Y', strtotime($rev['created_at'])); ?></span>
+                        </div>
+                        <div class="review-text">
+                            <?php echo nl2br(htmlspecialchars($rev['review'])); ?>
+                        </div>
+                    </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <p style="color:#aaa;">No reviews yet. Be the first to review!</p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+</div>
+
+<?php include 'includes/footer.php'; ?>
+
+</div> <!-- End user-main-content -->
+
+</body>
+</html>
+
