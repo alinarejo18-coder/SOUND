@@ -108,7 +108,6 @@ body {
 .data-table thead th { background: #252528; color: #f8fafc; }
 .data-table tbody tr { border-color: var(--admin-border); }
 .data-table tbody tr:hover { background: rgba(30, 215, 96, 0.06); }
-.admin-footer-global { background: #121214; border-color: var(--admin-border); }
 
 /* ---------- Admin Layout ---------- */
 .admin-layout {
@@ -654,55 +653,6 @@ body {
     background: var(--c-light);
 }
 
-/* Admin Global Footer */
-.admin-footer-global {
-    background: transparent;
-    border-top: 1px solid var(--admin-border);
-    padding: 24px;
-    margin-top: auto;
-}
-.admin-footer-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-    font-size: 14px;
-    color: var(--text-muted);
-    font-weight: 600;
-}
-.admin-fb-center {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.admin-fb-center .heart-icon {
-    width: 14px;
-    height: 14px;
-    color: #ef4444;
-    fill: #ef4444;
-}
-.admin-footer-link {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--c-primary);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.admin-footer-link:hover {
-    color: var(--c-primary-dark);
-}
-.admin-footer-link i, .admin-footer-link svg {
-    width: 16px;
-    height: 16px;
-}
-@media (min-width: 768px) {
-    .admin-footer-container {
-        flex-direction: row;
-        justify-content: space-between;
-    }
-}
-
 /* Form Styles */
 .form-panel {
     background: var(--admin-card);
@@ -879,7 +829,6 @@ input[type="file"].form-control::file-selector-button:hover {
 .admin-main .btn-primary:hover { background: #b91c1c !important; }
 .admin-main .btn-secondary, .admin-main .btn-outline { background: #ffffff !important; color: #172326 !important; border-color: #dbe5df !important; }
 .admin-main .btn-secondary:hover, .admin-main .btn-outline:hover { background: #f0f8f3 !important; border-color: #168a4b !important; }
-.admin-footer-global { background: #101a1c !important; color: #d9e2df; }
 
 /* Final premium dark admin skin. */
 :root, [data-theme="dark"] {
@@ -904,4 +853,3 @@ input[type="file"].form-control::file-selector-button:hover {
 .admin-main .btn-primary { background: linear-gradient(135deg,#8B5CF6,#EC4899) !important; color: #fff !important; }
 .admin-main .btn-secondary, .admin-main .btn-outline { background: #15151C !important; color: #F8FAFC !important; border-color: #3F3F46 !important; }
 .admin-main .btn-secondary:hover, .admin-main .btn-outline:hover { background: #1B1B24 !important; border-color: #8B5CF6 !important; }
-.admin-footer-global { background: #101017 !important; border-color: #27272A !important; }

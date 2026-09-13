@@ -201,7 +201,7 @@ $artist_count = mysqli_fetch_assoc($artist_query)["total"];
 
         </div>
 
-        <?php include '../includes/admin_footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </main>
 </div>
 

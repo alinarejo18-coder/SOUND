@@ -9,29 +9,23 @@ if (isset($admin_base)) {
 } elseif (isset($user_base)) {
     $root_path = $user_base . '../';
 }
-
-$current_page = basename($_SERVER['PHP_SELF']);
-$show_footer = in_array($current_page, ['index.php', 'music.php', 'videos.php', 'play_music.php', 'play_video.php']);
 ?>
 
-<?php if ($show_footer): ?>
-<footer class="global-footer">
-    <div class="footer-container">
-        <!-- Bottom Bar -->
-        <div class="footer-bottom">
-            <div class="fb-left">
-                &copy; <?php echo date('Y'); ?> SOUND. All rights reserved.
-            </div>
-            <div class="fb-center">
-                Made for music lovers <i data-lucide="heart" class="heart-icon"></i>
-            </div>
-            <div class="fb-right">
-                Powered by SOUND
-            </div>
+<footer class="admin-footer-global">
+    <div class="admin-footer-container">
+        <div class="admin-fb-left">
+            &copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($footer_site_name); ?>. All rights reserved.
+        </div>
+        <div class="admin-fb-center">
+            Made for music lovers <i data-lucide="heart" class="heart-icon"></i>
+        </div>
+        <div class="admin-fb-right">
+            <a href="<?php echo $root_path; ?>index.php" class="admin-footer-link">
+                <i data-lucide="external-link"></i> View Public Site
+            </a>
         </div>
     </div>
 </footer>
-<?php endif; ?>
 
 <!-- Lucide Icons Script -->
 <script src="https://unpkg.com/lucide@latest"></script>

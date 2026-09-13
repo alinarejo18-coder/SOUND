@@ -220,22 +220,28 @@ $reviews_query = "
 ";
 $reviews_result = mysqli_query($conn, $reviews_query);
 
-// Fetch Suggested Songs
+// Fetch Suggested Songs and Videos
 $suggested_songs = [];
 $m_genre = intval($music['genre_id']);
 $m_lang = intval($music['language_id']);
 $m_artist = intval($music['artist_id']);
 
 $sug_query = "
-    SELECT m.id, m.title, m.image, a.artist_name 
-    FROM music m
-    LEFT JOIN artists a ON m.artist_id = a.id
-    WHERE m.id != $music_id
-    ORDER BY 
-        (m.genre_id = $m_genre AND m.genre_id IS NOT NULL) DESC,
-        (m.language_id = $m_lang AND m.language_id IS NOT NULL) DESC,
-        (m.artist_id = $m_artist AND m.artist_id IS NOT NULL) DESC,
-        RAND()
+    (SELECT 'song' as type, m.id, m.title, m.image, a.artist_name,
+            (IF(m.genre_id = $m_genre AND m.genre_id IS NOT NULL, 1, 0) + 
+             IF(m.language_id = $m_lang AND m.language_id IS NOT NULL, 1, 0) + 
+             IF(m.artist_id = $m_artist AND m.artist_id IS NOT NULL, 1, 0)) as relevance
+     FROM music m
+     LEFT JOIN artists a ON m.artist_id = a.id
+     WHERE m.id != $music_id)
+    UNION
+    (SELECT 'video' as type, v.id, v.title, v.image, a.artist_name,
+            (IF(v.genre_id = $m_genre AND v.genre_id IS NOT NULL, 1, 0) + 
+             IF(v.language_id = $m_lang AND v.language_id IS NOT NULL, 1, 0) + 
+             IF(v.artist_id = $m_artist AND v.artist_id IS NOT NULL, 1, 0)) as relevance
+     FROM videos v
+     LEFT JOIN artists a ON v.artist_id = a.id)
+    ORDER BY relevance DESC, RAND()
     LIMIT 10
 ";
 $sug_res = mysqli_query($conn, $sug_query);
@@ -288,7 +294,7 @@ if ($user_id > 0) {
 
         @media (min-width: 1100px) {
             .top-split-layout {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 350px;
                 align-items: start;
             }
         }
@@ -1063,7 +1069,41 @@ if ($user_id > 0) {
         </div> <!-- End of reviews-section -->
         </div> <!-- End of main-column -->
 
-            <!-- Suggested Songs Sidebar Removed as per user request -->
+            <!-- Suggested Songs Sidebar -->
+            <div class="sidebar-column">
+                <h3>Suggested Songs & Videos</h3>
+                <div class="suggestion-list">
+                    <?php foreach ($suggested_songs as $sug): ?>
+                        <?php 
+                            $is_video = ($sug['type'] === 'video');
+                            $item_link = $is_video ? "play_video.php?id=" . $sug['id'] : "play_music.php?id=" . $sug['id'];
+                            $item_img = $sug['image'];
+                            if ($item_img) {
+                                if (!preg_match('/^https?:\/\//i', $item_img)) {
+                                    $item_img = $is_video ? "uploads/videos/images/" . htmlspecialchars($item_img) : "uploads/music/images/" . htmlspecialchars($item_img);
+                                }
+                            }
+                        ?>
+                        <a href="<?php echo $item_link; ?>" class="suggestion-item">
+                            <?php if ($item_img): ?>
+                                <img src="<?php echo htmlspecialchars($item_img); ?>" alt="Cover" class="suggestion-img">
+                            <?php else: ?>
+                                <div class="suggestion-img" style="background:#282828; display:flex; align-items:center; justify-content:center; color:#A1A1AA;">
+                                    <i data-lucide="<?php echo $is_video ? 'video' : 'music'; ?>" style="width:24px; height:24px;"></i>
+                                </div>
+                            <?php endif; ?>
+                            <div class="suggestion-info">
+                                <div class="suggestion-title"><?php echo htmlspecialchars($sug['title']); ?></div>
+                                <div class="suggestion-artist"><?php echo htmlspecialchars($sug['artist_name'] ?? 'Unknown'); ?></div>
+                            </div>
+                            <div style="color: #64748B; display: flex; align-items: center;">
+                                <i data-lucide="<?php echo $is_video ? 'video' : 'play-circle'; ?>" style="width: 20px; height: 20px;"></i>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
         </div> <!-- End of top-split-layout -->
     </div> <!-- End of play-container -->
 
@@ -1317,7 +1357,7 @@ if ($user_id > 0) {
                     
                     <!-- Modal Footer -->
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 0 0 0; border-top:1px solid #E2E8F0; margin-top:16px; flex-wrap:wrap;">
-                        <a href="/SOUND/user/dashboard.php" style="color:#2563EB; text-decoration:none; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:5px; transition:color 0.2s; flex-shrink:0;"
+                        <a href="../user/dashboard.php" style="color:#2563EB; text-decoration:none; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:5px; transition:color 0.2s; flex-shrink:0;"
                            onmouseover="this.style.color='#1E3A8A';" onmouseout="this.style.color='#2563EB';">
                             <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
                             Create New Playlist

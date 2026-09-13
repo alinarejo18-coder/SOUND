@@ -2,7 +2,10 @@
 if (!isset($current_page)) {
     $current_page = basename($_SERVER['PHP_SELF'], '.php');
 }
-$nav_base = '/SOUND/';
+$docRoot = realpath($_SERVER['DOCUMENT_ROOT']);
+$projectRoot = realpath(__DIR__ . '/..');
+$nav_base = str_replace($docRoot, '', $projectRoot);
+$nav_base = str_replace('\\', '/', $nav_base) . '/';
 ?>
 <nav class="navbar">
     <a href="<?php echo $nav_base; ?>index.php" class="logo"><img src="<?php echo $nav_base; ?>assets/images/sound-logo-white.svg" alt="SOUND Logo"></a>
@@ -37,7 +40,7 @@ $nav_base = '/SOUND/';
             <a href="<?php echo $nav_base; ?>register.php" class="btn btn-primary btn-sm" style="padding: 5px 10px;">Register</a>
         <?php endif; ?>
         
-        <button class="mobile-menu-toggle" aria-label="Toggle menu" onclick="document.querySelector('.navbar').classList.toggle('mobile-menu-active')">
+        <button class="mobile-menu-toggle" aria-label="Toggle menu" onclick="event.stopPropagation(); var s = document.querySelector('.sidebar'); if(s){ s.classList.toggle('open'); } else { document.querySelector('.navbar').classList.toggle('mobile-menu-active'); }">
             <span></span>
             <span></span>
             <span></span>

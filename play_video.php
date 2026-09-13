@@ -174,6 +174,37 @@ $reviews_query = "
     ORDER BY r.created_at DESC
 ";
 $reviews_result = mysqli_query($conn, $reviews_query);
+
+// Fetch Suggested Songs and Videos
+$suggested_items = [];
+$v_genre = intval($video['genre_id']);
+$v_lang = intval($video['language_id']);
+$v_artist = intval($video['artist_id']);
+
+$sug_query = "
+    (SELECT 'song' as type, m.id, m.title, m.image, a.artist_name,
+            (IF(m.genre_id = $v_genre AND m.genre_id IS NOT NULL, 1, 0) + 
+             IF(m.language_id = $v_lang AND m.language_id IS NOT NULL, 1, 0) + 
+             IF(m.artist_id = $v_artist AND m.artist_id IS NOT NULL, 1, 0)) as relevance
+     FROM music m
+     LEFT JOIN artists a ON m.artist_id = a.id)
+    UNION
+    (SELECT 'video' as type, v.id, v.title, v.image, a.artist_name,
+            (IF(v.genre_id = $v_genre AND v.genre_id IS NOT NULL, 1, 0) + 
+             IF(v.language_id = $v_lang AND v.language_id IS NOT NULL, 1, 0) + 
+             IF(v.artist_id = $v_artist AND v.artist_id IS NOT NULL, 1, 0)) as relevance
+     FROM videos v
+     LEFT JOIN artists a ON v.artist_id = a.id
+     WHERE v.id != $video_id)
+    ORDER BY relevance DESC, RAND()
+    LIMIT 10
+";
+$sug_res = mysqli_query($conn, $sug_query);
+if ($sug_res) {
+    while ($row = mysqli_fetch_assoc($sug_res)) {
+        $suggested_items[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -244,6 +275,90 @@ $reviews_result = mysqli_query($conn, $reviews_query);
             .interaction-section { grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
             .form-panel { padding: 25px; }
         }
+
+        /* Layout */
+        .top-split-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        @media (min-width: 1100px) {
+            .top-split-layout {
+                grid-template-columns: 1fr 350px;
+                align-items: start;
+            }
+        }
+        .main-column {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        .sidebar-column {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            background: #FFFFFF;
+            border-radius: 20px;
+            border: 1px solid #E2E8F0;
+            padding: 25px 20px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        }
+        .sidebar-column h3 {
+            color: #0F172A;
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .suggestion-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px;
+            border-radius: 12px;
+            background: #FFFFFF;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .suggestion-item:hover {
+            background: #EFF6FF;
+        }
+        .suggestion-img {
+            width: 52px;
+            height: 52px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+        .suggestion-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1;
+        }
+        .suggestion-title {
+            color: #0F172A;
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+        .suggestion-artist {
+            color: #64748B;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         /* Red + green media-player theme override */
         body { background: #0B0B0F !important; color: #F8FAFC !important; }
         .video-player-wrapper { border: 1px solid rgba(255,255,255,.1); }
@@ -256,6 +371,14 @@ $reviews_result = mysqli_query($conn, $reviews_query);
         .form-control:focus, .star-rating-ui select:focus { border-color: #8B5CF6 !important; box-shadow: 0 0 0 3px rgba(139,92,246,.17) !important; }
         .btn-submit { background: linear-gradient(135deg,#8B5CF6,#EC4899) !important; color: #ffffff !important; }
         .nav-back:hover { color: #8B5CF6 !important; }
+        
+        /* Suggestion items: dark bg, visible text */
+        .sidebar-column { background: #15151C !important; border-color: #27272A !important; }
+        .sidebar-column h3 { color: #F8FAFC !important; }
+        .suggestion-item { background: #1B1B24 !important; border-color: #27272A !important; }
+        .suggestion-item:hover { background: rgba(139,92,246,.15) !important; border-color: rgba(139,92,246,.3) !important; }
+        .suggestion-title { color: #F8FAFC !important; }
+        .suggestion-artist { color: #A1A1AA !important; }
     </style>
 </head>
 <body>
@@ -269,6 +392,9 @@ $reviews_result = mysqli_query($conn, $reviews_query);
     <?php if ($message): ?>
         <div class="alert alert-success"><?php echo $message; ?></div>
     <?php endif; ?>
+
+    <div class="top-split-layout">
+        <div class="main-column">
 
     <!-- Media Player -->
     <div class="video-player-wrapper">
@@ -379,6 +505,45 @@ $reviews_result = mysqli_query($conn, $reviews_query);
             <?php endif; ?>
         </div>
     </div>
+
+        </div> <!-- End of main-column -->
+
+        <!-- Suggested Songs Sidebar -->
+        <div class="sidebar-column">
+            <h3>Suggested Songs & Videos</h3>
+            <div class="suggestion-list">
+                <?php foreach ($suggested_items as $sug): ?>
+                    <?php 
+                        $is_video = ($sug['type'] === 'video');
+                        $item_link = $is_video ? "play_video.php?id=" . $sug['id'] : "play_music.php?id=" . $sug['id'];
+                        $item_img = $sug['image'];
+                        if ($item_img) {
+                            if (!preg_match('/^https?:\/\//i', $item_img)) {
+                                $item_img = $is_video ? "uploads/videos/images/" . htmlspecialchars($item_img) : "uploads/music/images/" . htmlspecialchars($item_img);
+                            }
+                        }
+                    ?>
+                    <a href="<?php echo $item_link; ?>" class="suggestion-item">
+                        <?php if ($item_img): ?>
+                            <img src="<?php echo htmlspecialchars($item_img); ?>" alt="Cover" class="suggestion-img">
+                        <?php else: ?>
+                            <div class="suggestion-img" style="background:#282828; display:flex; align-items:center; justify-content:center; color:#A1A1AA;">
+                                <i data-lucide="<?php echo $is_video ? 'video' : 'music'; ?>" style="width:24px; height:24px;"></i>
+                            </div>
+                        <?php endif; ?>
+                        <div class="suggestion-info">
+                            <div class="suggestion-title"><?php echo htmlspecialchars($sug['title']); ?></div>
+                            <div class="suggestion-artist"><?php echo htmlspecialchars($sug['artist_name'] ?? 'Unknown'); ?></div>
+                        </div>
+                        <div style="color: #64748B; display: flex; align-items: center;">
+                            <i data-lucide="<?php echo $is_video ? 'video' : 'play-circle'; ?>" style="width: 20px; height: 20px;"></i>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        
+    </div> <!-- End of top-split-layout -->
 
 </div>
 

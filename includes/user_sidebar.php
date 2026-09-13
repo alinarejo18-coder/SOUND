@@ -78,7 +78,10 @@ if ($user_id && isset($conn)) {
 }
 
 // Ensure base path is correct for links
-$base_path = '/SOUND/'; 
+$docRoot = realpath($_SERVER['DOCUMENT_ROOT']);
+$projectRoot = realpath(__DIR__ . '/..');
+$base_path = str_replace($docRoot, '', $projectRoot);
+$base_path = str_replace('\\', '/', $base_path) . '/';
 ?>
 
 <!-- Sidebar -->
@@ -134,7 +137,7 @@ $base_path = '/SOUND/';
 
         <div class="nav-section">
             <div class="nav-section-title">Account</div>
-            <a href="<?php echo $base_path; ?>user/dashboard.php" class="<?php echo $current_page === 'dashboard' ? 'active' : ''; ?>">
+            <a href="<?php echo $base_path; ?>user/profile.php" class="<?php echo $current_page === 'profile' ? 'active' : ''; ?>">
                 <span class="nav-icon"><i data-lucide="user"></i></span> My Profile
             </a>
             <a href="<?php echo $base_path; ?>logout.php">

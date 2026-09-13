@@ -7,47 +7,7 @@ $user_id = $_SESSION['user_id'];
 $message = "";
 $error = "";
 
-// Handle Profile Image Update / Delete
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'delete') {
-        $stmt = mysqli_prepare($conn, "SELECT profile_image FROM users WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $user_id);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-        if ($result && $result['profile_image']) {
-            $file_path = "../uploads/users/" . $result['profile_image'];
-            if (file_exists($file_path)) unlink($file_path);
-            
-            $stmt = mysqli_prepare($conn, "UPDATE users SET profile_image = NULL WHERE id = ?");
-            mysqli_stmt_bind_param($stmt, "i", $user_id);
-            mysqli_stmt_execute($stmt);
-            $message = "Profile image deleted successfully.";
-        }
-    } elseif (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = '../uploads/users/';
-        if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-        
-        $file_name = time() . '_' . basename($_FILES["profile_image"]["name"]);
-        $target_file = $upload_dir . $file_name;
-        if (move_uploaded_file($_FILES["profile_image"]["tmp_name"], $target_file)) {
-            $stmt = mysqli_prepare($conn, "SELECT profile_image FROM users WHERE id = ?");
-            mysqli_stmt_bind_param($stmt, "i", $user_id);
-            mysqli_stmt_execute($stmt);
-            $result = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-            if ($result && $result['profile_image']) {
-                $old_file = $upload_dir . $result['profile_image'];
-                if (file_exists($old_file)) unlink($old_file);
-            }
-            $stmt = mysqli_prepare($conn, "UPDATE users SET profile_image = ? WHERE id = ?");
-            mysqli_stmt_bind_param($stmt, "si", $file_name, $user_id);
-            if(mysqli_stmt_execute($stmt)){
-                $message = "Profile image updated successfully.";
-            } else {
-                $error = "Failed to update database.";
-            }
-        }
-    }
-}
+// Removed Profile Image Update logic (now in profile.php)
 
 // Handle Playlist Creation
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_playlist') {
@@ -102,6 +62,7 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             --text-highlight: #F8FAFC;
             --accent: #8B5CF6;
         }
+        *, *::before, *::after { box-sizing: border-box; }
         body, html {
             margin: 0; padding: 0;
             height: 100vh;
@@ -120,6 +81,9 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             grid-template-columns: 280px 1fr 320px;
             grid-template-rows: 1fr 90px;
             height: 100vh;
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
         
         @media (max-width: 1200px) {
@@ -138,8 +102,45 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
                     "main"
                     "player";
                 grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
             }
-            .sidebar { display: none !important; }
+            .sidebar { 
+                display: flex !important; 
+                position: fixed !important;
+                top: 0;
+                right: -100%;
+                bottom: 0;
+                width: min(85vw, 350px) !important;
+                background: #101017 !important;
+                z-index: 1000 !important;
+                transition: right 0.3s ease-in-out !important;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+                padding-bottom: 20px !important; 
+                overflow-y: auto;
+            }
+            .sidebar.open {
+                right: 0 !important;
+            }
+            .mobile-sidebar-toggle-btn {
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #8B5CF6, #EC4899);
+                color: white;
+                border: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                z-index: 9999;
+                cursor: pointer;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-sidebar-toggle-btn { display: none !important; }
         }
         
         /* Custom Scrollbar */
@@ -217,9 +218,10 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             background: var(--card-bg);
             object-fit: cover;
             display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
         }
-        .playlist-info { display: flex; flex-direction: column; gap: 4px; }
-        .playlist-title { font-weight: 500; font-size: 15px; }
+        .playlist-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .playlist-title { font-weight: 500; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .playlist-desc { color: var(--text-base); font-size: 13px; }
 
         /* Main Content */
@@ -229,9 +231,11 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             border-radius: 8px;
             margin: 8px 0;
             overflow-y: auto;
+            overflow-x: hidden;
             position: relative;
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
         .top-nav {
             position: sticky;
@@ -243,16 +247,18 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             justify-content: space-between;
             align-items: center;
             z-index: 10;
+            gap: 8px;
         }
         /* Top Navigation - specific widths for search centering */
-        .top-nav-left { flex: 1; }
-        .top-nav-center { flex: 2; display: flex; justify-content: center; }
-        .top-nav-right { flex: 1; display: flex; justify-content: flex-end; }
+        .top-nav-left { flex: 1; min-width: 0; }
+        .top-nav-center { flex: 2; display: flex; justify-content: flex-end; min-width: 0; }
+        .top-nav-right { flex: 1; display: flex; justify-content: flex-end; min-width: 0; flex-shrink: 0; gap: 16px; }
         
         .search-container {
             position: relative;
             width: 100%;
             max-width: 400px;
+            margin-right: 70px;
         }
         .search-container svg {
             position: absolute;
@@ -279,12 +285,16 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             padding: 4px 16px 4px 4px;
             border-radius: 500px;
             cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .user-menu:hover { background: rgba(0,0,0,0.8); }
         .user-avatar {
             width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
             background: #333; display:flex; align-items:center; justify-content:center;
+            flex-shrink: 0;
         }
+        .user-menu-name { font-weight:700; font-size:14px; margin-right:8px; }
 
         .profile-header {
             padding: 24px;
@@ -298,15 +308,19 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             border-radius: 50%;
             box-shadow: 0 4px 60px rgba(0,0,0,0.5);
             object-fit: cover;
+            flex-shrink: 0;
         }
         .profile-info { 
             flex: 1; 
             display: flex;
             flex-direction: column;
             justify-content: center;
+            min-width: 0;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
         .profile-label { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .profile-name { font-size: clamp(32px, 5vw, 56px); font-weight: 900; margin: 0 0 16px 0; letter-spacing: -2px; color: #fff; text-shadow: 0 4px 8px rgba(0,0,0,0.5); line-height: 1.1; word-break: break-word; }
+        .profile-name { font-size: clamp(32px, 5vw, 56px); font-weight: 900; margin: 0 0 16px 0; letter-spacing: -2px; color: #fff; text-shadow: 0 4px 8px rgba(0,0,0,0.5); line-height: 1.1; word-break: break-word; overflow-wrap: break-word; }
         .profile-stats { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.8); }
         
         .content-section { padding: 24px; background: rgba(0,0,0,0.2); flex: 1; }
@@ -324,6 +338,8 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             cursor: pointer;
             transition: background 0.3s ease;
             position: relative;
+            min-width: 0;
+            overflow: hidden;
         }
         .music-card:hover { background: var(--card-hover); }
         .music-card img {
@@ -334,7 +350,7 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
         .music-card-title { font-weight: 700; font-size: 16px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .music-card-desc { color: var(--text-base); font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         
-        .image-wrapper { position: relative; margin-bottom: 16px; width: 100%; aspect-ratio: 1/1; border-radius: 8px; }
+        .image-wrapper { position: relative; margin-bottom: 16px; width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden; }
         .image-wrapper img { width: 100%; height: 100%; margin-bottom: 0 !important; object-fit: cover; border-radius: 8px; }
         
         .play-btn-overlay {
@@ -346,6 +362,7 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             opacity: 0; transform: translateY(8px);
             transition: all 0.3s ease;
             z-index: 10;
+            color: #ffffff;
         }
         .music-card:hover .play-btn-overlay { opacity: 1; transform: translateY(0); }
         .play-btn-overlay:hover { transform: scale(1.08) !important; box-shadow: 0 6px 16px rgba(139, 92, 246, 0.6); }
@@ -372,7 +389,7 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
         }
         .np-header { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
         .np-img { width: 100%; aspect-ratio: 1/1; border-radius: 8px; object-fit: cover; background: var(--card-bg); }
-        .np-title { font-size: 24px; font-weight: 700; margin: 8px 0 4px; }
+        .np-title { font-size: 24px; font-weight: 700; margin: 8px 0 4px; overflow-wrap: break-word; word-break: break-word; }
         .np-artist { color: var(--text-base); font-size: 16px; }
         .np-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-base); text-align:center;}
 
@@ -385,20 +402,21 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            min-height: 90px;
         }
-        .player-left { display: flex; align-items: center; gap: 16px; width: 30%; }
-        .player-left img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; background: #282828; }
-        .pl-info { display: flex; flex-direction: column; justify-content: center; }
-        .pl-title { font-size: 14px; font-weight: 600; color: #fff; text-decoration: none; }
+        .player-left { display: flex; align-items: center; gap: 16px; width: 30%; min-width: 0; }
+        .player-left img { width: 56px; height: 56px; border-radius: 4px; object-fit: cover; background: #282828; flex-shrink: 0; }
+        .pl-info { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .pl-title { font-size: 14px; font-weight: 600; color: #fff; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .pl-title:hover { text-decoration: underline; }
-        .pl-artist { font-size: 12px; color: var(--text-base); }
+        .pl-artist { font-size: 12px; color: var(--text-base); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        .player-center { display: flex; flex-direction: column; align-items: center; width: 40%; max-width: 722px; gap: 8px; }
+        .player-center { display: flex; flex-direction: column; align-items: center; width: 40%; max-width: 722px; gap: 8px; min-width: 0; }
         .player-controls { display: flex; align-items: center; gap: 24px; }
-        .ctrl-btn { background: none; border: none; color: var(--text-base); cursor: pointer; padding: 0; display:flex; align-items:center; }
+        .ctrl-btn { background: none; border: none; color: var(--text-base); cursor: pointer; padding: 0; display:flex; align-items:center; flex-shrink: 0; }
         .ctrl-btn:hover { color: #fff; }
         .ctrl-btn svg { width: 16px; height: 16px; fill: currentColor; }
-        .ctrl-play { background: #fff; color: #000; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; transition: transform 0.1s; }
+        .ctrl-play { background: #fff; color: #000; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; transition: transform 0.1s; flex-shrink: 0; }
         .ctrl-play:hover { transform: scale(1.05); color: #000; }
         .ctrl-play svg { width: 20px; height: 20px; fill: currentColor; margin-left:2px; }
         .ctrl-play.is-playing svg { margin-left:0; }
@@ -411,7 +429,7 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
         .progress-bar-fill { height: 100%; background: #fff; border-radius: 2px; width: 0%; pointer-events: none; }
         .progress-bar-container:hover .progress-bar-fill { background: var(--accent); }
         
-        .player-right { display: flex; align-items: center; justify-content: flex-end; gap: 16px; width: 30%; }
+        .player-right { display: flex; align-items: center; justify-content: flex-end; gap: 16px; width: 30%; min-width: 0; }
         .vol-container { display: flex; align-items: center; gap: 8px; }
         .vol-slider { width: 93px; height: 4px; -webkit-appearance: none; background: #4d4d4d; border-radius: 2px; outline: none; }
         .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer; display: none; }
@@ -438,6 +456,207 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
         .music-card-desc { color: #A1A1AA !important; }
         .ctrl-play, .progress-bar-fill { background: linear-gradient(135deg,#8B5CF6,#EC4899) !important; color: #ffffff !important; }
         .play-btn-overlay { background: linear-gradient(135deg,#8B5CF6,#EC4899) !important; }
+
+        /* ===== RESPONSIVE MEDIA QUERIES ===== */
+
+        /* --- Mobile Menu Toggle (visible ≤768px) --- */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-highlight);
+            cursor: pointer;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+        .mobile-menu-toggle svg { width: 24px; height: 24px; }
+
+        /* Mobile bottom nav (visible ≤768px as sidebar replacement) */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: #101017;
+            border-top: 1px solid #27272A;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)) 0;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .mobile-bottom-nav a {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-base);
+            font-size: 10px;
+            font-weight: 500;
+            text-decoration: none;
+            padding: 4px 8px;
+            transition: color 0.2s;
+        }
+        .mobile-bottom-nav a:hover,
+        .mobile-bottom-nav a.active { color: var(--text-highlight); }
+        .mobile-bottom-nav svg { width: 20px; height: 20px; }
+
+        /* --- Tablet ≤1024px --- */
+        @media (max-width: 1024px) {
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 16px;
+            }
+            .profile-img-large { width: 160px; height: 160px; }
+            .vol-slider { width: 70px; }
+        }
+
+        /* --- ≤768px: Sidebar hidden, single column --- */
+        @media (max-width: 768px) {
+            body, html {
+                overflow-y: auto;
+                overflow-x: hidden;
+                height: 100%;
+            }
+            .app-container {
+                height: auto;
+                min-height: 100vh;
+                grid-template-rows: 1fr auto;
+            }
+            .main-content {
+                margin: 0;
+                border-radius: 0;
+                overflow-y: visible;
+                min-height: 0;
+            }
+            .mobile-menu-toggle { display: flex; }
+            .mobile-bottom-nav { display: flex; }
+
+            /* Top nav */
+            .top-nav { padding: 12px 16px; gap: 8px; }
+            .top-nav-left { flex: 0 0 auto; }
+            .top-nav-center { flex: 1; justify-content: center; }
+            .top-nav-right { flex: 0 0 auto; }
+            .search-container { margin-right: 0; }
+            .search-bar { padding: 10px 12px 10px 40px; font-size: 13px; }
+            .search-container svg { left: 12px; width: 18px; height: 18px; }
+            .user-menu { padding: 4px 10px 4px 4px; }
+            .user-menu-name { display: none; }
+
+            /* Profile header */
+            .profile-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                padding: 20px 16px;
+                gap: 16px;
+            }
+            .profile-img-large { width: 120px; height: 120px; }
+            .profile-info { align-items: center; }
+            .profile-name { font-size: clamp(24px, 6vw, 36px); letter-spacing: -1px; }
+
+            /* Content sections */
+            .content-section { padding: 16px; }
+            .section-title { font-size: 20px; margin-bottom: 16px; }
+
+            /* Cards */
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 12px;
+            }
+            .music-card { padding: 12px; }
+            .music-card-title { font-size: 14px; }
+            .music-card-desc { font-size: 12px; }
+
+            /* Bottom Player — Compact mobile layout */
+            .bottom-player {
+                flex-wrap: wrap;
+                padding: 8px 12px;
+                min-height: auto;
+                gap: 4px;
+                margin-bottom: 56px; /* Space for mobile bottom nav */
+            }
+            .player-left {
+                width: 100%;
+                order: 1;
+                gap: 10px;
+            }
+            .player-left img { width: 40px; height: 40px; }
+            .player-center {
+                width: 100%;
+                order: 2;
+                max-width: none;
+                gap: 4px;
+            }
+            .player-controls { gap: 16px; }
+            .ctrl-play { width: 36px; height: 36px; }
+            .player-right {
+                display: none;
+            }
+            .time-text { min-width: 32px; font-size: 10px; }
+
+            /* Modal */
+            .modal-content { padding: 20px; margin: 16px; width: calc(100% - 32px); }
+            .modal-title { font-size: 20px; }
+
+            /* Play button overlay always visible on touch */
+            .play-btn-overlay { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- ≤480px: Small phones --- */
+        @media (max-width: 480px) {
+            .top-nav { padding: 10px 12px; }
+            .profile-header { padding: 16px 12px; gap: 12px; }
+            .profile-img-large { width: 96px; height: 96px; }
+            .profile-name { font-size: clamp(20px, 7vw, 28px); margin-bottom: 8px; }
+            .profile-label { font-size: 12px; margin-bottom: 4px; }
+            .profile-stats { font-size: 12px; }
+
+            .content-section { padding: 12px; }
+            .section-title { font-size: 18px; margin-bottom: 12px; }
+
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .music-card { padding: 10px; }
+            .music-card-title { font-size: 13px; }
+            .music-card-desc { font-size: 11px; }
+
+            .player-controls { gap: 12px; }
+            .bottom-player { padding: 6px 10px; }
+            .player-left img { width: 36px; height: 36px; }
+            .pl-title { font-size: 12px; }
+            .pl-artist { font-size: 11px; }
+        }
+
+        /* --- ≤375px: Extra small phones (iPhone SE, etc.) --- */
+        @media (max-width: 375px) {
+            .profile-img-large { width: 80px; height: 80px; }
+            .profile-name { font-size: clamp(18px, 6vw, 24px); }
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .music-card { padding: 8px; }
+            .music-card-title { font-size: 12px; }
+            .music-card-desc { font-size: 10px; }
+
+            .search-bar { padding: 8px 10px 8px 36px; font-size: 12px; }
+            .search-container svg { left: 10px; width: 16px; height: 16px; }
+        }
+
+        /* --- ≤320px: Absolute minimum width --- */
+        @media (max-width: 320px) {
+            .profile-img-large { width: 64px; height: 64px; }
+            .profile-name { font-size: 18px; letter-spacing: -0.5px; }
+            .card-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .top-nav { padding: 8px 10px; }
+            .content-section { padding: 10px; }
+        }
     </style>
 </head>
 <body>
@@ -515,7 +734,11 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <div class="top-nav">
-            <div class="top-nav-left"></div>
+            <div class="top-nav-left">
+                <button class="mobile-menu-toggle" onclick="document.querySelector('.mobile-bottom-nav').style.display = document.querySelector('.mobile-bottom-nav').style.display === 'flex' ? 'none' : 'flex'" aria-label="Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+            </div>
             <div class="top-nav-center">
                 <div class="search-container">
                     <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
@@ -532,7 +755,7 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
                     <?php else: ?>
                         <div class="user-avatar" style="font-size:12px; color:#fff;"><?php echo strtoupper(substr($user_data['name'], 0, 1)); ?></div>
                     <?php endif; ?>
-                    <span style="font-weight:700; font-size:14px; margin-right:8px;"><?php echo htmlspecialchars($user_data['name']); ?></span>
+                    <span class="user-menu-name"><?php echo htmlspecialchars($user_data['name']); ?></span>
                     <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
                 </div>
             </div>
@@ -559,18 +782,20 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
                 <?php if (mysqli_num_rows($public_playlists_result) > 0): ?>
                     <?php while ($ppl = mysqli_fetch_assoc($public_playlists_result)): ?>
                         <div class="music-card">
-                            <?php if ($ppl['cover_image']): ?>
-                                <img src="../uploads/playlists/<?php echo htmlspecialchars($ppl['cover_image']); ?>" alt="Cover">
-                            <?php else: ?>
-                                <div style="width:100%; aspect-ratio:1/1; background:#282828; border-radius:6px; margin-bottom:16px; display:flex; align-items:center; justify-content:center;">
-                                    <i data-lucide="music" style="width: 24px; height: 24px;"></i>
+                            <div class="image-wrapper" style="position: relative;">
+                                <?php if ($ppl['cover_image']): ?>
+                                    <img src="../uploads/playlists/<?php echo htmlspecialchars($ppl['cover_image']); ?>" alt="Cover" style="width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px;">
+                                <?php else: ?>
+                                    <div style="width:100%; aspect-ratio:1/1; background:#282828; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                                        <i data-lucide="music" style="width: 24px; height: 24px;"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="play-btn-overlay">
+                                    <svg style="width: 24px; height: 24px; fill: currentColor; margin-left: 4px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                                 </div>
-                            <?php endif; ?>
+                            </div>
                             <div class="music-card-title"><?php echo htmlspecialchars($ppl['title']); ?></div>
                             <div class="music-card-desc">By <?php echo htmlspecialchars($ppl['creator_name']); ?></div>
-                            <div class="play-btn-overlay">
-                                <i data-lucide="play" style="width: 24px; height: 24px; fill: currentColor; margin-left: 4px;"></i>
-                            </div>
                         </div>
                     <?php endwhile; ?>
                 <?php else: ?>
@@ -603,8 +828,8 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
                                     </div>
                                 <?php endif; ?>
                                 <div class="play-btn-overlay">
-                                    <i data-lucide="play" class="card-play-icon"></i>
-                                    <i data-lucide="pause" class="card-pause-icon"></i>
+                                    <svg class="card-play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    <svg class="card-pause-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                                 </div>
                             </div>
                             <div class="music-card-title"><?php echo htmlspecialchars($ls['title']); ?></div>
@@ -658,8 +883,8 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
                 <button class="ctrl-btn" title="Enable shuffle"><i data-lucide="shuffle" style="width: 20px; height: 20px;"></i></button>
                 <button class="ctrl-btn" id="prevBtn" title="Previous"><i data-lucide="skip-back" style="width: 20px; height: 20px;"></i></button>
                 <button class="ctrl-btn ctrl-play" id="playBtn" title="Play">
-                    <i data-lucide="play" id="playIcon"></i>
-                    <i data-lucide="pause" id="pauseIcon" style="display:none;"></i>
+                    <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <svg id="pauseIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                 </button>
                 <button class="ctrl-btn" id="nextBtn" title="Next"><i data-lucide="skip-forward" style="width: 20px; height: 20px;"></i></button>
                 <button class="ctrl-btn" title="Enable repeat"><i data-lucide="repeat" style="width: 20px; height: 20px;"></i></button>
@@ -687,50 +912,27 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
 
 </div>
 
-<!-- Profile Modal -->
-<div id="profileModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">Edit Profile Image</h2>
-            <span class="modal-close" onclick="document.getElementById('profileModal').style.display='none'">&times;</span>
-        </div>
-        
-        <?php if ($message): ?>
-            <div style="background:rgba(16,185,129,0.1);color:#10b981;padding:12px;margin-bottom:20px;border-radius:6px;"><?php echo $message; ?></div>
-        <?php endif; ?>
-        <?php if ($error): ?>
-            <div style="background:rgba(239,68,68,0.1);color:#ef4444;padding:12px;margin-bottom:20px;border-radius:6px;"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" enctype="multipart/form-data" style="margin-bottom: 20px; display:flex; flex-direction:column; gap:16px;">
-            <style>
-                #profileImgInput {
-                    width: 100%; color: var(--text-base);
-                    background: #282828; padding: 16px; border-radius: 8px; border: 1px solid #333; box-sizing: border-box; font-size: 14px;
-                }
-                #profileImgInput::file-selector-button {
-                    background: #fff; color: #000; border: none; padding: 8px 16px; border-radius: 500px; cursor: pointer; font-weight: 700; font-size: 13px; margin-right: 16px; transition: 0.2s;
-                }
-                #profileImgInput::file-selector-button:hover {
-                    transform: scale(1.02);
-                }
-            </style>
-            <input type="file" id="profileImgInput" name="profile_image" accept="image/*" required>
-            <button type="submit" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:500px; cursor:pointer; font-weight:bold; font-size: 14px; text-align:center; width: 100%; transition: 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Upload New Image</button>
-        </form>
-        
-        <?php if ($user_data['profile_image']): ?>
-        <form method="POST">
-            <input type="hidden" name="action" value="delete">
-            <button type="submit" onclick="return confirm('Delete profile image?');" style="background:transparent; color:#ef4444; border:1px solid #ef4444; padding:12px 24px; border-radius:500px; cursor:pointer; font-weight:bold; font-size: 14px; text-align:center; width: 100%; transition: 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">Remove Image</button>
-        </form>
-        <?php endif; ?>
-        
-        <div style="margin-top:24px; border-top:1px solid #333; padding-top:24px; text-align:center;">
-            <a href="../logout.php" style="color:var(--text-base); font-weight:500; font-size:14px; text-decoration:none; transition:0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-base)'">Logout from SOUND</a>
-        </div>
-    </div>
-</div>
+<!-- Mobile Bottom Navigation (visible ≤768px) -->
+<nav class="mobile-bottom-nav">
+    <a href="../index.php">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+    </a>
+    <a href="../search.php">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search
+    </a>
+    <a href="#likedSongsSection" onclick="document.getElementById('likedSongsSection').scrollIntoView({behavior: 'smooth'})">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Library
+    </a>
+    <a href="profile.php" class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+    </a>
+</nav>
+
+<!-- Profile Modal Removed -->
 
 <!-- Create Playlist Modal -->
 <div id="createPlaylistModal" class="modal">
@@ -757,9 +959,9 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
 </div>
 
 <script>
-    // Profile Modal
+    // Profile Button Navigation
     document.getElementById('profileBtn').addEventListener('click', () => {
-        document.getElementById('profileModal').style.display = 'flex';
+        window.location.href = 'profile.php';
     });
     
     // Audio Player Logic ported from play_music.php
@@ -996,6 +1198,23 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
         // Show modal automatically if there was a response from form submit
         document.getElementById('profileModal').style.display = 'flex';
     <?php endif; ?>
+</script>
+
+<button id="mobileSidebarToggleBtn" class="mobile-sidebar-toggle-btn" aria-label="Toggle Sidebar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px; pointer-events: none;">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+</button>
+<script>
+    document.getElementById('mobileSidebarToggleBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        const sidebar = document.querySelector('.sidebar');
+        if(sidebar) {
+            sidebar.classList.toggle('open');
+        }
+    });
 </script>
 
 </body>

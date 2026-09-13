@@ -197,7 +197,43 @@ $items_count = mysqli_num_rows($items_result);
                     "player";
                 grid-template-columns: 1fr;
             }
-            .sidebar { display: none !important; }
+            .sidebar { 
+                display: flex !important; 
+                position: fixed !important;
+                top: 0;
+                right: -100%;
+                bottom: 0;
+                width: min(85vw, 350px) !important;
+                background: #101017 !important;
+                z-index: 1000 !important;
+                transition: right 0.3s ease-in-out !important;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.5);
+                padding-bottom: 20px !important; 
+                overflow-y: auto;
+            }
+            .sidebar.open {
+                right: 0 !important;
+            }
+            .mobile-sidebar-toggle-btn {
+                position: fixed;
+                top: 15px;
+                left: 15px;
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #8B5CF6, #EC4899);
+                color: white;
+                border: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                z-index: 9999;
+                cursor: pointer;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-sidebar-toggle-btn { display: none !important; }
         }
         
         /* Custom Scrollbar */
@@ -303,9 +339,9 @@ $items_count = mysqli_num_rows($items_result);
             z-index: 10;
         }
         /* Top Navigation - specific widths for search centering */
-        .top-nav-left { flex: 1; }
-        .top-nav-center { flex: 2; display: flex; justify-content: center; }
-        .top-nav-right { flex: 1; display: flex; justify-content: flex-end; }
+        .top-nav-left { flex: 1; min-width: 0; }
+        .top-nav-center { flex: 2; display: flex; justify-content: flex-start; padding-left: 20px; min-width: 0; }
+        .top-nav-right { flex: 1; display: flex; justify-content: flex-end; min-width: 0; flex-shrink: 0; gap: 16px; }
         
         .search-container {
             position: relative;
@@ -401,9 +437,10 @@ $items_count = mysqli_num_rows($items_result);
             opacity: 0; transform: translateY(8px);
             transition: all 0.3s ease;
             box-shadow: 0 8px 8px rgba(0,0,0,0.3);
+            color: #ffffff;
         }
         .music-card:hover .play-btn-overlay { opacity: 1; transform: translateY(0); }
-        .play-btn-overlay svg { width: 24px; height: 24px; fill: #000; margin-left: 4px; }
+        .play-btn-overlay svg { width: 24px; height: 24px; fill: #ffffff; margin-left: 4px; }
 
         /* Right Panel */
         .right-panel {
@@ -1358,6 +1395,23 @@ $items_count = mysqli_num_rows($items_result);
             alert('Network error occurred.');
         }
     }
+</script>
+
+<button id="mobileSidebarToggleBtn" class="mobile-sidebar-toggle-btn" aria-label="Toggle Sidebar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px; pointer-events: none;">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+</button>
+<script>
+    document.getElementById('mobileSidebarToggleBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        const sidebar = document.querySelector('.sidebar');
+        if(sidebar) {
+            sidebar.classList.toggle('open');
+        }
+    });
 </script>
 </body>
 </html>

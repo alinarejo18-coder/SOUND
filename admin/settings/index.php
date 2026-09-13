@@ -105,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </main>
 </div>
-<?php include '../../includes/admin_footer.php'; ?>
+<?php include '../../includes/footer.php'; ?>
 
 <script>
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {

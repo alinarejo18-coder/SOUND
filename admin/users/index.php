@@ -86,9 +86,9 @@ $query = mysqli_query(
                 </table>
             </div>
         </div>
+        <?php include '../../includes/footer.php'; ?>
     </main>
 </div>
-<?php include '../../includes/admin_footer.php'; ?>
 
 <script>
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {

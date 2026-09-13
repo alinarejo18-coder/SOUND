@@ -112,7 +112,7 @@ $result = mysqli_stmt_get_result($stmt);
 
         </div>
         
-        <?php include '../includes/admin_footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </main>
 </div>
 

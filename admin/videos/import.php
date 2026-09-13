@@ -263,7 +263,7 @@ while ($row = mysqli_fetch_assoc($res)) {
     </main>
 </div>
 
-<?php include '../../includes/admin_footer.php'; ?>
+<?php include '../../includes/footer.php'; ?>
 
 <script>
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {

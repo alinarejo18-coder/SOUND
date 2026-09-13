@@ -260,7 +260,7 @@ $admin_base = '';
             </div>
         </div>
         
-        <?php include '../includes/admin_footer.php'; ?>
+        <?php include '../includes/footer.php'; ?>
     </main>
 
     <script>
