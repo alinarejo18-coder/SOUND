@@ -496,6 +496,63 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <script>
     const registerForm = document.getElementById('registerForm');
+    const countryCodeMap = [
+        { code: '+1', prefixes: ['1'] },
+        { code: '+7', prefixes: ['7'] },
+        { code: '+20', prefixes: ['20'] },
+        { code: '+27', prefixes: ['27'] },
+        { code: '+30', prefixes: ['30'] },
+        { code: '+31', prefixes: ['31'] },
+        { code: '+32', prefixes: ['32'] },
+        { code: '+33', prefixes: ['33'] },
+        { code: '+34', prefixes: ['34'] },
+        { code: '+39', prefixes: ['39'] },
+        { code: '+41', prefixes: ['41'] },
+        { code: '+44', prefixes: ['44'] },
+        { code: '+45', prefixes: ['45'] },
+        { code: '+46', prefixes: ['46'] },
+        { code: '+47', prefixes: ['47'] },
+        { code: '+49', prefixes: ['49'] },
+        { code: '+61', prefixes: ['61'] },
+        { code: '+65', prefixes: ['65'] },
+        { code: '+81', prefixes: ['81'] },
+        { code: '+82', prefixes: ['82'] },
+        { code: '+86', prefixes: ['86'] },
+        { code: '+91', prefixes: ['91'] },
+        { code: '+92', prefixes: ['92'] },
+        { code: '+234', prefixes: ['234'] },
+        { code: '+254', prefixes: ['254'] },
+        { code: '+353', prefixes: ['353'] },
+        { code: '+358', prefixes: ['358'] },
+        { code: '+880', prefixes: ['880'] },
+        { code: '+960', prefixes: ['960'] },
+        { code: '+962', prefixes: ['962'] },
+        { code: '+966', prefixes: ['966'] },
+        { code: '+971', prefixes: ['971'] }
+    ];
+
+    function detectCountryCode(phoneNumber) {
+        const digits = phoneNumber.replace(/\D/g, '');
+        if (!digits) return null;
+
+        let matchedCode = null;
+
+        countryCodeMap.forEach(function (item) {
+            item.prefixes.forEach(function (prefix) {
+                if (digits.startsWith(prefix) && (!matchedCode || prefix.length > matchedCode.length)) {
+                    matchedCode = prefix;
+                }
+            });
+        });
+
+        if (!matchedCode) return null;
+
+        const selected = countryCodeMap.find(function (item) {
+            return item.prefixes.includes(matchedCode);
+        });
+
+        return selected ? selected.code : null;
+    }
 
     function setFieldError(input, message) {
         const fieldError = document.querySelector('[data-error-for="' + input.name + '"]');
@@ -601,8 +658,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 return false;
             }
 
-            if (value.length < rule.min || value.length > rule.max) {
-                setFieldError(input, 'Phone number length is invalid for the selected country code.');
+            if (value.length > rule.max) {
+                const fieldError = document.querySelector('[data-error-for="phone"]');
+                setFieldError(input, 'Too many digits for the selected country code.');
+                if (fieldError) {
+                    fieldError.style.color = '#FCA5A5';
+                }
+                return false;
+            }
+
+            if (value.length < rule.min) {
+                setFieldError(input, 'Phone number is too short for the selected country code.');
                 return false;
             }
         }
@@ -675,7 +741,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             validateField(this);
         });
 
+        input.addEventListener('focus', function () {
+            if (fieldName === 'phone') {
+                const countrySelect = registerForm.querySelector('[name="country_code"]');
+                if (!countrySelect.value) {
+                    setFieldError(countrySelect, 'Please select a country code first.');
+                }
+            }
+        });
+
         input.addEventListener('input', function () {
+            if (fieldName === 'phone') {
+                const phoneInput = this;
+                const detectedCode = detectCountryCode(phoneInput.value);
+                const countrySelect = registerForm.querySelector('[name="country_code"]');
+
+                if (countrySelect.value === '') {
+                    if (detectedCode) {
+                        countrySelect.value = detectedCode;
+                        clearFieldError(countrySelect);
+                    } else {
+                        setFieldError(countrySelect, 'Please select a country code first.');
+                    }
+                } else if (detectedCode && countrySelect.value !== detectedCode) {
+                    countrySelect.value = detectedCode;
+                    clearFieldError(countrySelect);
+                }
+            }
+
             if (this.classList.contains('error')) {
                 validateField(this);
             }

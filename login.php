@@ -405,11 +405,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         });
 
-        // Prevent going back to previous cached pages after logout
+        // Prevent browser back-button cache restore after logout/login flow
         history.pushState(null, null, location.href);
-        window.onpopstate = function () {
-            history.go(1);
-        };
+
+        window.addEventListener('popstate', function () {
+            history.pushState(null, null, location.href);
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
     </script>
 
 </body>
