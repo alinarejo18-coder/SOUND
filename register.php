@@ -10,7 +10,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $name     = trim($_POST["name"]);
     $address  = trim($_POST["address"]);
+    $country_code = trim($_POST["country_code"] ?? "");
     $phone    = trim($_POST["phone"]);
+    $phone    = ($country_code !== "" && $phone !== "") ? $country_code . " " . $phone : $phone;
     $email    = trim($_POST["email"]);
     $password = $_POST["password"];
     $confirm_password = $_POST["confirm_password"] ?? "";
@@ -18,6 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (
         empty($name) ||
         empty($address) ||
+        empty($country_code) ||
         empty($phone) ||
         empty($email) ||
         empty($password) ||
@@ -55,8 +58,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $profile_image = NULL;
 
-            // Generate unique user_id using uniqid
-            $user_id = "USER_" . uniqid();
+            // Generate a simple numeric user_id in the range 1000 to 100000000
+            $user_id = null;
+            for ($attempt = 0; $attempt < 50; $attempt++) {
+                $candidate = (string) mt_rand(1000, 100000000);
+                $user_id_check = mysqli_prepare($conn, "SELECT id FROM users WHERE user_id = ?");
+                mysqli_stmt_bind_param($user_id_check, "s", $candidate);
+                mysqli_stmt_execute($user_id_check);
+                mysqli_stmt_store_result($user_id_check);
+
+                if (mysqli_stmt_num_rows($user_id_check) === 0) {
+                    $user_id = $candidate;
+                    mysqli_stmt_close($user_id_check);
+                    break;
+                }
+
+                mysqli_stmt_close($user_id_check);
+            }
+
+            if ($user_id === null) {
+                $user_id = (string) time();
+            }
 
             // Insert user with generated user_id
             $stmt = mysqli_prepare(
@@ -263,9 +285,73 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             border: 1px solid rgba(34,197,94,.45);
         }
 
+        .field-error {
+            display: block;
+            min-height: 18px;
+            margin-top: 6px;
+            color: #FCA5A5;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .auth-input.error {
+            border-color: rgba(239,68,68,.9);
+            box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+        }
+
+        .country-code-select.error {
+            border-color: rgba(239,68,68,.9);
+            box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+        }
+
+        .phone-input-wrap {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        .phone-input-wrap .country-code-select {
+            width: 170px;
+            min-width: 170px;
+            background: var(--auth-card-bg);
+            border: 1px solid var(--auth-input-border);
+            color: var(--auth-text-dark);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 15px;
+            box-sizing: border-box;
+            font-family: inherit;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, #A1A1AA 50%), linear-gradient(135deg, #A1A1AA 50%, transparent 50%);
+            background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+            background-size: 6px 6px, 6px 6px;
+            background-repeat: no-repeat;
+            padding-right: 28px;
+        }
+
+        .phone-input-wrap .country-code-select option {
+            background: #15151C;
+            color: #F8FAFC;
+        }
+
+        .phone-input-wrap .phone-input {
+            flex: 1;
+            min-width: 0;
+        }
+
         @media (max-width: 480px) {
             .auth-card {
                 padding: 28px 20px;
+            }
+
+            .phone-input-wrap {
+                flex-direction: column;
+            }
+
+            .phone-input-wrap .country-code-select {
+                width: 100%;
             }
         }
     </style>
@@ -286,7 +372,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="" class="auth-form">
+        <form method="POST" action="" class="auth-form" id="registerForm" novalidate>
             <div class="form-group">
                 <label>Full Name</label>
                 <input
@@ -296,6 +382,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Enter your full name"
                     required
                 >
+                <span class="field-error" data-error-for="name"></span>
             </div>
 
             <div class="form-group">
@@ -306,17 +393,57 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Enter your address"
                     required
                 ></textarea>
+                <span class="field-error" data-error-for="address"></span>
             </div>
 
             <div class="form-group">
                 <label>Phone</label>
-                <input
-                    type="text"
-                    name="phone"
-                    class="auth-input form-control"
-                    placeholder="Enter your phone number"
-                    required
-                >
+                <div class="phone-input-wrap">
+                    <select name="country_code" class="country-code-select form-control" aria-label="Country code" required>
+                        <option value="">Code</option>
+                        <option value="+1">🇺🇸 +1</option>
+                        <option value="+7">🇷🇺 +7</option>
+                        <option value="+20">🇪🇬 +20</option>
+                        <option value="+27">🇿🇦 +27</option>
+                        <option value="+30">🇬🇷 +30</option>
+                        <option value="+31">🇳🇱 +31</option>
+                        <option value="+32">🇧🇪 +32</option>
+                        <option value="+33">🇫🇷 +33</option>
+                        <option value="+34">🇪🇸 +34</option>
+                        <option value="+39">🇮🇹 +39</option>
+                        <option value="+41">🇨🇭 +41</option>
+                        <option value="+44">🇬🇧 +44</option>
+                        <option value="+45">🇩🇰 +45</option>
+                        <option value="+46">🇸🇪 +46</option>
+                        <option value="+47">🇳🇴 +47</option>
+                        <option value="+49">🇩🇪 +49</option>
+                        <option value="+61">🇦🇺 +61</option>
+                        <option value="+65">🇸🇬 +65</option>
+                        <option value="+81">🇯🇵 +81</option>
+                        <option value="+82">🇰🇷 +82</option>
+                        <option value="+86">🇨🇳 +86</option>
+                        <option value="+91">🇮🇳 +91</option>
+                        <option value="+92">🇵🇰 +92</option>
+                        <option value="+234">🇳🇬 +234</option>
+                        <option value="+254">🇰🇪 +254</option>
+                        <option value="+353">🇮🇪 +353</option>
+                        <option value="+358">🇫🇮 +358</option>
+                        <option value="+880">🇧🇩 +880</option>
+                        <option value="+960">🇲🇻 +960</option>
+                        <option value="+962">🇯🇴 +962</option>
+                        <option value="+966">🇸🇦 +966</option>
+                        <option value="+971">🇦🇪 +971</option>
+                    </select>
+                    <input
+                        type="text"
+                        name="phone"
+                        class="auth-input form-control phone-input"
+                        placeholder="Enter your phone number"
+                        required
+                    >
+                </div>
+                <span class="field-error" data-error-for="country_code"></span>
+                <span class="field-error" data-error-for="phone"></span>
             </div>
 
             <div class="form-group">
@@ -328,6 +455,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Enter your email"
                     required
                 >
+                <span class="field-error" data-error-for="email"></span>
             </div>
 
             <div class="form-group">
@@ -339,6 +467,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Minimum 6 characters"
                     required
                 >
+                <span class="field-error" data-error-for="password"></span>
             </div>
             
             <div class="form-group">
@@ -350,6 +479,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Confirm your password"
                     required
                 >
+                <span class="field-error" data-error-for="confirm_password"></span>
             </div>
 
             <button type="submit" class="auth-button btn btn-primary">
@@ -363,6 +493,205 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 </div>
+
+<script>
+    const registerForm = document.getElementById('registerForm');
+
+    function setFieldError(input, message) {
+        const fieldError = document.querySelector('[data-error-for="' + input.name + '"]');
+        input.classList.add('error');
+        if (fieldError) {
+            fieldError.textContent = message;
+        }
+    }
+
+    function clearFieldError(input) {
+        const fieldError = document.querySelector('[data-error-for="' + input.name + '"]');
+        input.classList.remove('error');
+        if (fieldError) {
+            fieldError.textContent = '';
+        }
+    }
+
+    function validateField(input) {
+        const name = input.name;
+        const value = input.value.trim();
+
+        clearFieldError(input);
+
+        if (name === 'name') {
+            if (!value) {
+                setFieldError(input, 'Full name is required.');
+                return false;
+            }
+            if (!/^[A-Za-z ]+$/.test(value)) {
+                setFieldError(input, 'Name can only contain letters and spaces.');
+                return false;
+            }
+            if (value.length < 2) {
+                setFieldError(input, 'Name must be at least 2 characters.');
+                return false;
+            }
+        }
+
+        if (name === 'address') {
+            if (!value) {
+                setFieldError(input, 'Address is required.');
+                return false;
+            }
+            if (value.length < 5) {
+                setFieldError(input, 'Address must be at least 5 characters.');
+                return false;
+            }
+        }
+
+        if (name === 'country_code') {
+            if (!input.value) {
+                setFieldError(input, 'Please select a country code.');
+                return false;
+            }
+        }
+
+        if (name === 'phone') {
+            if (!value) {
+                setFieldError(input, 'Phone number is required.');
+                return false;
+            }
+
+            const selectedCode = registerForm.querySelector('[name="country_code"]').value;
+            const countryRules = {
+                '+1': { min: 10, max: 10 },
+                '+7': { min: 11, max: 11 },
+                '+20': { min: 10, max: 10 },
+                '+27': { min: 9, max: 9 },
+                '+30': { min: 10, max: 10 },
+                '+31': { min: 9, max: 9 },
+                '+32': { min: 9, max: 9 },
+                '+33': { min: 9, max: 9 },
+                '+34': { min: 9, max: 9 },
+                '+39': { min: 9, max: 10 },
+                '+41': { min: 9, max: 9 },
+                '+44': { min: 10, max: 10 },
+                '+45': { min: 8, max: 8 },
+                '+46': { min: 9, max: 9 },
+                '+47': { min: 8, max: 8 },
+                '+49': { min: 10, max: 11 },
+                '+61': { min: 9, max: 9 },
+                '+65': { min: 8, max: 8 },
+                '+81': { min: 10, max: 10 },
+                '+82': { min: 9, max: 10 },
+                '+86': { min: 11, max: 11 },
+                '+91': { min: 10, max: 10 },
+                '+92': { min: 10, max: 10 },
+                '+234': { min: 10, max: 10 },
+                '+254': { min: 9, max: 10 },
+                '+353': { min: 9, max: 9 },
+                '+358': { min: 9, max: 9 },
+                '+880': { min: 10, max: 10 },
+                '+960': { min: 7, max: 7 },
+                '+962': { min: 9, max: 9 },
+                '+966': { min: 9, max: 9 },
+                '+971': { min: 9, max: 9 }
+            };
+
+            const rule = countryRules[selectedCode] || { min: 7, max: 15 };
+
+            if (!/^[0-9]+$/.test(value)) {
+                setFieldError(input, 'Phone number must contain digits only.');
+                return false;
+            }
+
+            if (value.length < rule.min || value.length > rule.max) {
+                setFieldError(input, 'Phone number length is invalid for the selected country code.');
+                return false;
+            }
+        }
+
+        if (name === 'email') {
+            if (!value) {
+                setFieldError(input, 'Email is required.');
+                return false;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                setFieldError(input, 'Please enter a valid email address.');
+                return false;
+            }
+        }
+
+        if (name === 'password') {
+            if (!input.value) {
+                setFieldError(input, 'Password is required.');
+                return false;
+            }
+            if (input.value.length < 6) {
+                setFieldError(input, 'Password must be at least 6 characters.');
+                return false;
+            }
+        }
+
+        if (name === 'confirm_password') {
+            const passwordField = registerForm.querySelector('[name="password"]');
+            if (!input.value) {
+                setFieldError(input, 'Please confirm your password.');
+                return false;
+            }
+            if (passwordField.value !== input.value) {
+                setFieldError(input, 'Passwords do not match.');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function validateRegisterForm() {
+        let isValid = true;
+
+        const fields = {
+            name: registerForm.querySelector('[name="name"]'),
+            address: registerForm.querySelector('[name="address"]'),
+            country_code: registerForm.querySelector('[name="country_code"]'),
+            phone: registerForm.querySelector('[name="phone"]'),
+            email: registerForm.querySelector('[name="email"]'),
+            password: registerForm.querySelector('[name="password"]'),
+            confirm_password: registerForm.querySelector('[name="confirm_password"]')
+        };
+
+        Object.values(fields).forEach(input => {
+            if (input) {
+                const result = validateField(input);
+                if (!result) isValid = false;
+            }
+        });
+
+        return isValid;
+    }
+
+    ['name', 'address', 'country_code', 'phone', 'email', 'password', 'confirm_password'].forEach(fieldName => {
+        const input = registerForm.querySelector('[name="' + fieldName + '"]');
+        if (!input) return;
+
+        input.addEventListener('blur', function () {
+            validateField(this);
+        });
+
+        input.addEventListener('input', function () {
+            if (this.classList.contains('error')) {
+                validateField(this);
+            }
+        });
+    });
+
+    registerForm.addEventListener('submit', function (event) {
+        if (!validateRegisterForm()) {
+            event.preventDefault();
+            const firstInvalid = registerForm.querySelector('.error');
+            if (firstInvalid) {
+                firstInvalid.focus();
+            }
+        }
+    });
+</script>
 
 </body>
 </html>

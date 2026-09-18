@@ -116,25 +116,61 @@ if (mysqli_num_rows($video_result) == 0) {
     die("Video not found.");
 }
 $video = mysqli_fetch_assoc($video_result);
+$raw_video_file = trim((string)$video['video_file']);
 $youtube_id = '';
-if (preg_match('/^youtube:([A-Za-z0-9_-]+)$/', (string)$video['video_file'], $youtube_match)) {
+
+if (preg_match('/^youtube:([A-Za-z0-9_-]{11})$/', $raw_video_file, $youtube_match)) {
+    $youtube_id = $youtube_match[1];
+} elseif (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i', $raw_video_file, $youtube_match)) {
     $youtube_id = $youtube_match[1];
 }
-$itunes_preview_url = preg_match('/^https?:\/\//i', (string)$video['video_file'])
-    ? (string)$video['video_file']
-    : '';
-$itunes_video_preview_url = strncmp((string)$video['video_file'], 'itunes-video:', 13) === 0
-    ? substr((string)$video['video_file'], 13)
-    : '';
-$itunes_track_only = strncmp((string)$video['video_file'], 'itunes:', 7) === 0;
-$unsupported_external_media = preg_match('/^[a-z][a-z0-9+.-]*:/i', (string)$video['video_file']) === 1;
-$video_extension = strtolower(pathinfo((string)$video['video_file'], PATHINFO_EXTENSION));
+
+$itunes_video_preview_url = '';
+$itunes_preview_url = '';
+$itunes_track_only = false;
+$unsupported_external_media = false;
+$external_video_url = '';
+
+if (strncmp($raw_video_file, 'itunes-video:', 13) === 0) {
+    $itunes_video_preview_url = substr($raw_video_file, 13);
+} elseif (strncmp($raw_video_file, 'itunes:', 7) === 0) {
+    $itunes_track_only = true;
+} elseif ($youtube_id === '') {
+    if (preg_match('/^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)$/i', $raw_video_file)) {
+        $url_to_check = preg_match('/^https?:\/\//i', $raw_video_file) ? $raw_video_file : 'https://' . $raw_video_file;
+        $url_path = parse_url($url_to_check, PHP_URL_PATH) ?? '';
+        $ext = strtolower(pathinfo($url_path, PATHINFO_EXTENSION));
+        
+        if (in_array($ext, ['mp4', 'm4v', 'webm', 'ogg'])) {
+            $external_video_url = $url_to_check;
+        } else {
+            $itunes_preview_url = $url_to_check;
+        }
+    } else {
+        $unsupported_external_media = preg_match('/^[a-z][a-z0-9+.-]*:/i', $raw_video_file) === 1;
+    }
+}
+
+$video_extension = strtolower(pathinfo($raw_video_file, PATHINFO_EXTENSION));
 $video_mime_types = ['mp4' => 'video/mp4', 'm4v' => 'video/mp4', 'webm' => 'video/webm', 'ogg' => 'video/ogg'];
 $video_mime_type = $video_mime_types[$video_extension] ?? 'video/mp4';
-$video_filename = basename((string)$video['video_file']);
-$video_directory = is_file(__DIR__ . '/uploads/videos/files/' . $video_filename)
-    ? 'uploads/videos/files/'
-    : 'uploads/videos/';
+
+$video_filename = '';
+$video_directory = '';
+$is_local_file = false;
+
+if ($youtube_id === '' && $itunes_video_preview_url === '' && $itunes_preview_url === '' && !$itunes_track_only && !$unsupported_external_media && $external_video_url === '') {
+    $video_filename = basename($raw_video_file);
+    if ($video_filename !== '') {
+        if (is_file(__DIR__ . '/uploads/videos/files/' . $video_filename)) {
+            $video_directory = 'uploads/videos/files/';
+            $is_local_file = true;
+        } elseif (is_file(__DIR__ . '/uploads/videos/' . $video_filename)) {
+            $video_directory = 'uploads/videos/';
+            $is_local_file = true;
+        }
+    }
+}
 $artwork_src = (string)($video['image'] ?? '');
 if ($artwork_src !== '' && !preg_match('/^https?:\/\//i', $artwork_src)) {
     $artwork_src = 'uploads/videos/images/' . $artwork_src;
@@ -218,8 +254,8 @@ if ($sug_res) {
         .play-container { max-width: 100%; margin: 0 auto; padding: 20px; }
 
         /* Video Player */
-        .video-player-wrapper { width: 100%; background: #000; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-        .video-player-wrapper video { width: 100%; display: block; max-height: 500px; }
+        .video-player-wrapper { width: 100%; background: #000; border-radius: 16px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); position: relative; z-index: 40; pointer-events: auto !important; }
+        .video-player-wrapper video { width: 100%; display: block; max-height: 500px; position: relative; z-index: 50; pointer-events: auto !important; }
         .itunes-preview-stage { min-height: 520px; padding: 36px 24px 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; background: radial-gradient(circle at center, #27202d 0%, #101017 65%, #08080c 100%); box-sizing: border-box; }
         .itunes-preview-artwork { width: min(100%, 360px); aspect-ratio: 1; object-fit: cover; border-radius: 12px; box-shadow: 0 18px 45px rgba(0,0,0,.55); }
         .itunes-preview-copy { width: min(100%, 560px); text-align: center; }
@@ -425,11 +461,24 @@ if ($sug_res) {
             <div style="padding:40px 20px; text-align:center; color:#A1A1AA;">No iTunes preview is available for this track.</div>
         <?php elseif ($unsupported_external_media): ?>
             <div style="padding:40px 20px; text-align:center; color:#A1A1AA;">This external media is no longer available. iTunes previews are audio-only.</div>
-        <?php else: ?>
+        <?php elseif ($external_video_url): ?>
+            <video controls preload="metadata" playsinline poster="<?php echo htmlspecialchars($artwork_src); ?>">
+                <source src="<?php echo htmlspecialchars($external_video_url); ?>" type="<?php echo $video_mime_type; ?>">
+                Your browser does not support video playback.
+            </video>
+        <?php elseif ($is_local_file): ?>
             <video controls poster="uploads/videos/images/<?php echo htmlspecialchars($video['image']); ?>">
                 <source src="<?php echo htmlspecialchars($video_directory . $video_filename); ?>" type="<?php echo $video_mime_type; ?>">
                 Your browser does not support the video element.
             </video>
+        <?php else: ?>
+            <div style="padding:40px 20px; text-align:center; color:#A1A1AA;">
+                <div style="background:#15151C; border:1px solid #27272A; border-radius:12px; padding:30px; display:inline-block;">
+                    <i data-lucide="video-off" style="width:48px; height:48px; margin-bottom:15px; opacity:0.5;"></i>
+                    <h3 style="margin:0 0 10px 0; color:#F8FAFC;">Video Unavailable</h3>
+                    <p style="margin:0; font-size:14px;">Unable to play this video. The source format is unsupported or the file is missing.</p>
+                </div>
+            </div>
         <?php endif; ?>
     </div>
 

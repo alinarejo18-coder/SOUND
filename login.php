@@ -272,6 +272,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             border: 1px solid rgba(34,197,94,.45);
         }
 
+        .field-error {
+            display: block;
+            min-height: 18px;
+            margin-top: 6px;
+            color: #FCA5A5;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .auth-input.error {
+            border-color: rgba(239,68,68,.9);
+            box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+        }
+
         @media (max-width: 480px) {
             .auth-card {
                 padding: 28px 20px;
@@ -295,7 +309,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
         <?php endif; ?>
 
-        <form method="POST" class="auth-form">
+        <form method="POST" class="auth-form" id="loginForm" novalidate>
             <div class="form-group">
                 <label>User ID or Email</label>
                 <input
@@ -305,6 +319,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Enter User ID or Email"
                     required
                 >
+                <span class="field-error" data-error-for="login"></span>
             </div>
 
             <div class="form-group">
@@ -316,6 +331,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     placeholder="Enter Password"
                     required
                 >
+                <span class="field-error" data-error-for="password"></span>
             </div>
 
             <button type="submit" class="auth-button btn btn-primary">
@@ -331,6 +347,64 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
     <script>
+        const loginForm = document.getElementById('loginForm');
+
+        function setFieldError(input, message) {
+            const fieldError = document.querySelector('[data-error-for="' + input.name + '"]');
+            input.classList.add('error');
+            if (fieldError) {
+                fieldError.textContent = message;
+            }
+        }
+
+        function clearFieldError(input) {
+            const fieldError = document.querySelector('[data-error-for="' + input.name + '"]');
+            input.classList.remove('error');
+            if (fieldError) {
+                fieldError.textContent = '';
+            }
+        }
+
+        function validateLoginForm() {
+            let isValid = true;
+            const loginInput = loginForm.querySelector('[name="login"]');
+            const passwordInput = loginForm.querySelector('[name="password"]');
+
+            clearFieldError(loginInput);
+            clearFieldError(passwordInput);
+
+            if (!loginInput.value.trim()) {
+                setFieldError(loginInput, 'User ID or Email is required.');
+                isValid = false;
+            } else if (loginInput.value.trim().length < 4) {
+                setFieldError(loginInput, 'Please enter a valid User ID or Email.');
+                isValid = false;
+            } else if (!/^[A-Za-z0-9_@.-]+$/.test(loginInput.value.trim()) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginInput.value.trim())) {
+                setFieldError(loginInput, 'Use letters, numbers, underscore, dot, or a valid email format.');
+                isValid = false;
+            }
+
+            if (!passwordInput.value) {
+                setFieldError(passwordInput, 'Password is required.');
+                isValid = false;
+            } else if (passwordInput.value.length < 6) {
+                setFieldError(passwordInput, 'Password must be at least 6 characters.');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        loginForm.addEventListener('submit', function (event) {
+            if (!validateLoginForm()) {
+                event.preventDefault();
+                const firstInvalid = loginForm.querySelector('.error');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
+            }
+        });
+
         // Prevent going back to previous cached pages after logout
         history.pushState(null, null, location.href);
         window.onpopstate = function () {
