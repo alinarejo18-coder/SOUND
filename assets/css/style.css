@@ -360,10 +360,67 @@ select:focus {
     gap: 10px;
 }
 
+.nav-controls .btn {
+    min-width: 78px;
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+@media (max-width: 991px) {
+    .navbar {
+        padding: 8px 12px 8px 16px;
+        gap: 8px;
+    }
+
+    .navbar .logo {
+        flex-shrink: 0;
+        margin-right: 0;
+    }
+
+    .nav-controls {
+        margin-left: auto;
+        justify-content: flex-end;
+        flex: 0 0 auto;
+        gap: 6px;
+    }
+
+    .nav-controls .btn {
+        min-width: 70px;
+        min-height: 30px;
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .mobile-menu-toggle {
+        width: 20px;
+        height: 18px;
+    }
+
+    .navbar.mobile-menu-active .nav-controls {
+        width: 100%;
+        margin-top: 8px;
+        justify-content: space-between;
+    }
+
+    .navbar.mobile-menu-active .nav-controls .btn {
+        flex: 1;
+        max-width: calc(50% - 4px);
+    }
+}
+
 @media (max-width: 375px) {
     .nav-controls {
-        gap: 5px;
+        gap: 4px;
     }
+
+    .nav-controls .btn {
+        min-width: 64px;
+        padding: 5px 8px;
+        font-size: 10px;
+    }
+
     .navbar .logo {
         font-size: 24px;
     }

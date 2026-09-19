@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 01, 2026 at 10:05 AM
+-- Generation Time: Sep 19, 2026 at 08:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -90,7 +90,8 @@ INSERT INTO `albums` (`id`, `album_name`, `artist_id`, `created_at`, `image`) VA
 (25, 'Meri Zindagi Hai Tu - Single', 25, '2026-08-18 16:40:06', '__none__'),
 (26, 'Some Girls', 29, '2026-08-23 16:49:46', 'https://cdn-images.dzcdn.net/images/cover/4daeaee9a15329dc861f62976d0cbb7c/250x250-000000-80-0-0.jpg'),
 (27, 'Satyameva Jayate 2 (Original Motion Picture Soundtrack)', 36, '2026-08-27 17:33:45', '__none__'),
-(28, 'Tere Bin (Original Score) - Single', 37, '2026-08-27 18:00:27', '__none__');
+(28, 'Tere Bin (Original Score) - Single', 37, '2026-08-27 18:00:27', '__none__'),
+(29, 'Boy.', 40, '2026-09-01 08:20:19', 'https://cdn-images.dzcdn.net/images/cover/0800be9c717146566d4f3eaf3480e6d7/250x250-000000-80-0-0.jpg');
 
 -- --------------------------------------------------------
 
@@ -110,11 +111,11 @@ CREATE TABLE `artists` (
 --
 
 INSERT INTO `artists` (`id`, `artist_name`, `created_at`, `image`) VALUES
-(1, 'Rahat Fateh Ali Khan & Nish Asher', '2026-08-18 15:53:09', '__none__'),
+(1, 'Rahat Fateh Ali Khan & Nish Asher', '2026-08-18 15:53:09', 'https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/250x250-000000-80-0-0.jpg'),
 (2, 'Ed Sheeran', '2026-08-18 15:58:19', 'https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/250x250-000000-80-0-0.jpg'),
 (3, 'The Weeknd', '2026-08-18 16:07:15', 'https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/250x250-000000-80-0-0.jpg'),
 (4, 'Imagine Dragons', '2026-08-18 16:08:16', 'https://cdn-images.dzcdn.net/images/artist/1ba025c23cae3dee14b51152990285fc/250x250-000000-80-0-0.jpg'),
-(5, 'Luis Fonsi & Daddy Yankee', '2026-08-18 16:10:26', '__none__'),
+(5, 'Luis Fonsi & Daddy Yankee', '2026-08-18 16:10:26', 'https://cdn-images.dzcdn.net/images/artist/db13837cc4442f835ceaeeeb67e9dc98/250x250-000000-80-0-0.jpg'),
 (6, 'Alan Walker', '2026-08-18 16:10:58', 'https://cdn-images.dzcdn.net/images/artist/79d384488d390e65a6c27a95c431627e/250x250-000000-80-0-0.jpg'),
 (7, 'Glass Animals', '2026-08-18 16:11:31', 'https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/250x250-000000-80-0-0.jpg'),
 (8, 'Atlus', '2026-08-18 16:14:18', 'https://cdn-images.dzcdn.net/images/artist/09073251c6a5cb97def13435833dcc15/250x250-000000-80-0-0.jpg'),
@@ -123,8 +124,8 @@ INSERT INTO `artists` (`id`, `artist_name`, `created_at`, `image`) VALUES
 (11, 'Selah Soul', '2026-08-18 16:16:45', 'https://cdn-images.dzcdn.net/images/artist/2a3aed6d9d96335a3dc81b8477bead8d/250x250-000000-80-0-0.jpg'),
 (12, 'Grayscale', '2026-08-18 16:18:28', 'https://cdn-images.dzcdn.net/images/artist/93bd73e2e92ed912df209b0983fd9de6/250x250-000000-80-0-0.jpg'),
 (13, 'KIDZ BOP Kids', '2026-08-18 16:19:11', 'https://cdn-images.dzcdn.net/images/artist/5fba57b995f40383fdcfef6ee406ac74/250x250-000000-80-0-0.jpg'),
-(14, 'Lauren Babic & Seraphim', '2026-08-18 16:20:18', '__none__'),
-(15, 'Hozier', '2026-08-18 16:21:20', '__none__'),
+(14, 'Lauren Babic & Seraphim', '2026-08-18 16:20:18', 'https://cdn-images.dzcdn.net/images/artist/10fc34032630cbc92d5e64dc9cfcc155/250x250-000000-80-0-0.jpg'),
+(15, 'Hozier', '2026-08-18 16:21:20', 'https://cdn-images.dzcdn.net/images/artist/4970da41372f40bb2d85b71d41c359e8/250x250-000000-80-0-0.jpg'),
 (16, 'OneRepublic', '2026-08-18 16:22:16', 'https://cdn-images.dzcdn.net/images/artist/36556d769dc4052d915eb78c8daf98fb/250x250-000000-80-0-0.jpg'),
 (17, 'Mario', '2026-08-18 16:22:43', 'https://cdn-images.dzcdn.net/images/artist/d3a4b7dff134dd1f2ac09640bc4b1bef/250x250-000000-80-0-0.jpg'),
 (18, 'Casey Donahew', '2026-08-18 16:23:16', 'https://cdn-images.dzcdn.net/images/artist/98f9d06765d1bc7d1148cc1bdb2f3ce3/250x250-000000-80-0-0.jpg'),
@@ -133,22 +134,23 @@ INSERT INTO `artists` (`id`, `artist_name`, `created_at`, `image`) VALUES
 (21, 'Stephen Sanchez', '2026-08-18 16:24:24', 'https://cdn-images.dzcdn.net/images/artist/6f9911aab77f6b9836e3fb9bf4b46335/250x250-000000-80-0-0.jpg'),
 (22, 'Ahmed Jahanzeb', '2026-08-18 16:36:59', 'https://cdn-images.dzcdn.net/images/artist/74e74d4ad72548289e6564efa36b700b/250x250-000000-80-0-0.jpg'),
 (23, 'Rahat Fateh Ali Khan', '2026-08-18 16:37:58', 'https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/250x250-000000-80-0-0.jpg'),
-(24, 'Shae Gill & Ali Sethi', '2026-08-18 16:38:31', '__none__'),
-(25, 'Asim Azhar & Sabri Sisters', '2026-08-18 16:40:06', '__none__'),
+(24, 'Shae Gill & Ali Sethi', '2026-08-18 16:38:31', 'https://cdn-images.dzcdn.net/images/artist/b9d5c3c6b3e5e0e75bda061ada8995a9/250x250-000000-80-0-0.jpg'),
+(25, 'Asim Azhar & Sabri Sisters', '2026-08-18 16:40:06', 'https://cdn-images.dzcdn.net/images/artist/52a08f78d491088013cf8b68a13ae8b9/250x250-000000-80-0-0.jpg'),
 (26, 'Coldplay', '2026-08-23 05:59:27', 'https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/250x250-000000-80-0-0.jpg'),
 (27, 'ASH ISLAND', '2026-08-23 06:02:55', 'https://cdn-images.dzcdn.net/images/artist/c279e84434198f1d3eb4ff1599ab4724/250x250-000000-80-0-0.jpg'),
 (28, 'Tebey', '2026-08-23 16:44:49', 'https://cdn-images.dzcdn.net/images/artist/990d5763b0d040480b5426197e0c00c6/250x250-000000-80-0-0.jpg'),
 (29, 'The Rolling Stones', '2026-08-23 16:49:46', 'https://cdn-images.dzcdn.net/images/artist/cac467bef484959b4ad503c4cb7ef83d/250x250-000000-80-0-0.jpg'),
 (30, 'Acoustic Remedies by Kamran', '2026-08-23 16:52:36', 'https://cdn-images.dzcdn.net/images/artist//250x250-000000-80-0-0.jpg'),
-(31, 'Pritam, Arijit Singh & Amitabh Bhattacharya', '2026-08-23 16:54:31', 'https://cdn-images.dzcdn.net/images/artist//250x250-000000-80-0-0.jpg'),
+(31, 'Pritam, Arijit Singh & Amitabh Bhattacharya', '2026-08-23 16:54:31', 'https://cdn-images.dzcdn.net/images/artist/d4914ccd414067cd5e2c108867079a85/250x250-000000-80-0-0.jpg'),
 (32, 'RajTailorSoundz', '2026-08-23 16:57:36', 'https://cdn-images.dzcdn.net/images/artist//250x250-000000-80-0-0.jpg'),
-(33, 'Bohemia & Punjabi Dump', '2026-08-25 04:14:10', '__none__'),
+(33, 'Bohemia & Punjabi Dump', '2026-08-25 04:14:10', 'https://cdn-images.dzcdn.net/images/artist/f52365b4cc64affef301afdf89af8d5f/250x250-000000-80-0-0.jpg'),
 (34, 'DARSHANLALVALECHA', '2026-08-27 06:11:18', 'https://cdn-images.dzcdn.net/images/artist/0ee59d440de18d5af8a278af09d0c044/250x250-000000-80-0-0.jpg'),
 (35, 'MARKPAIN', '2026-08-27 07:35:48', 'https://cdn-images.dzcdn.net/images/artist/d5dbd9875eab390a81a35d3f10f0a8f5/250x250-000000-80-0-0.jpg'),
-(36, 'Jubin Nautiyal & Neeti Mohan', '2026-08-27 17:33:45', '__none__'),
+(36, 'Jubin Nautiyal & Neeti Mohan', '2026-08-27 17:33:45', 'https://cdn-images.dzcdn.net/images/artist/9031b483049b5551abcb11529873b4f6/250x250-000000-80-0-0.jpg'),
 (37, 'Shani Arshad', '2026-08-27 18:00:27', 'https://cdn-images.dzcdn.net/images/artist/069278086e9b1e4ad6f2fb86512e1b8c/250x250-000000-80-0-0.jpg'),
 (38, 'Marina and The Diamonds', '2026-08-27 19:06:15', 'https://cdn-images.dzcdn.net/images/artist/a2d0e12d5e8b9cf9f489db3b64c20533/250x250-000000-80-0-0.jpg'),
-(39, 'HOOP_MUSIC', '2026-08-28 19:26:44', 'https://cdn-images.dzcdn.net/images/artist/030f857536985a8bc8ac3429a0b13824/250x250-000000-80-0-0.jpg');
+(39, 'HOOP_MUSIC', '2026-08-28 19:26:44', 'https://cdn-images.dzcdn.net/images/artist/030f857536985a8bc8ac3429a0b13824/250x250-000000-80-0-0.jpg'),
+(40, 'offonoff', '2026-09-01 08:20:19', 'https://cdn-images.dzcdn.net/images/artist/e7c6bb751bd07f4623c1012d4a89e379/250x250-000000-80-0-0.jpg');
 
 -- --------------------------------------------------------
 
@@ -257,7 +259,8 @@ INSERT INTO `music` (`id`, `title`, `artist_id`, `album_id`, `year_id`, `genre_i
 (24, 'Pasoori', 24, 24, 9, 2, NULL, NULL, 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/f3/f9/06/f3f906c3-79d5-ac9a-5fdd-262048f955f9/cover.jpg/600x600bb.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview126/v4/62/33/1e/62331ea8-d1df-027d-fe75-ac16a519323d/mzaf_14381883946572745360.plus.aac.p.m4a', 1, '2026-08-18 16:38:31', '1608356084'),
 (25, 'Meri Zindagi Hai Tu', 25, 25, 12, 13, NULL, NULL, 'https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/39/49/d4/3949d4b2-63b0-e6f4-4fc1-ea122ef390db/859722614695_cover.jpg/600x600bb.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/48/f5/33/48f533db-8557-62c6-9ad6-012ebacd3234/mzaf_2439508553999966059.plus.aac.p.m4a', 1, '2026-08-18 16:40:06', '1852517390'),
 (26, 'Without You I\'m Lost', 35, NULL, 12, 3, NULL, NULL, 'https://v.monophonic.digital/content/01KABW1Y7Z69YGWMQ13JH93GHH/1000x1000.jpg', '', 1, '2026-08-27 07:35:48', 'v69g1b8'),
-(27, 'Meri Zindagi Hai Tu', 36, 27, 1, 15, NULL, NULL, 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/e7/d2/63/e7d26367-b835-68ac-7e1f-9701f5dad5bd/8902894361422_cover.jpg/600x600bb.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/70/16/31/7016311f-71ee-dbea-7fd6-331f8e053cf9/mzaf_18364273274420978024.plus.aac.p.m4a', 1, '2026-08-27 17:33:45', '1596876213');
+(27, 'Meri Zindagi Hai Tu', 36, 27, 1, 15, NULL, NULL, 'https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/e7/d2/63/e7d26367-b835-68ac-7e1f-9701f5dad5bd/8902894361422_cover.jpg/600x600bb.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/70/16/31/7016311f-71ee-dbea-7fd6-331f8e053cf9/mzaf_18364273274420978024.plus.aac.p.m4a', 1, '2026-08-27 17:33:45', '1596876213'),
+(28, 'Dance', 40, 29, 2, 14, NULL, NULL, 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/83/6b/40/836b4093-0e77-2121-21b7-42765bc1a9f1/80928575.jpg/600x600bb.jpg', 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/c0/85/53/c08553b3-78f1-2be3-37c0-eb9732ac0fb4/mzaf_11029503395457273540.plus.aac.p.m4a', 1, '2026-09-01 08:20:19', '1344721738');
 
 -- --------------------------------------------------------
 
@@ -317,7 +320,8 @@ INSERT INTO `playlist_items` (`id`, `playlist_id`, `music_id`, `added_at`) VALUE
 (15, 6, 3, '2026-08-29 17:52:53'),
 (16, 4, 26, '2026-09-01 07:19:50'),
 (17, 4, 25, '2026-09-01 07:35:02'),
-(18, 4, 6, '2026-09-01 07:41:15');
+(18, 4, 6, '2026-09-01 07:41:15'),
+(19, 4, 27, '2026-09-13 09:48:01');
 
 -- --------------------------------------------------------
 
@@ -351,7 +355,8 @@ INSERT INTO `ratings` (`id`, `user_id`, `music_id`, `video_id`, `rating`) VALUES
 (13, 1, 21, NULL, 3),
 (14, 4, 19, NULL, 3),
 (15, 1, 17, NULL, 3),
-(16, 7, 25, NULL, 4);
+(16, 7, 25, NULL, 4),
+(17, 1, 28, NULL, 2);
 
 -- --------------------------------------------------------
 
@@ -387,7 +392,8 @@ INSERT INTO `reviews` (`id`, `user_id`, `music_id`, `video_id`, `review`, `creat
 (11, 1, 21, NULL, 'Excellent goodddd', '2026-08-28 18:52:41', '2026-08-29 17:17:40'),
 (12, 4, 19, NULL, 'nice', '2026-08-28 19:00:01', '2026-08-28 19:00:01'),
 (13, 1, 17, NULL, 'nice stay', '2026-08-29 18:16:27', '2026-08-29 18:17:23'),
-(14, 7, 25, NULL, 'good', '2026-08-31 06:39:34', '2026-08-31 06:39:34');
+(14, 7, 25, NULL, 'good', '2026-08-31 06:39:34', '2026-08-31 06:39:34'),
+(15, 1, 28, NULL, 'Good Songs review by Ali.', '2026-09-02 11:06:00', '2026-09-02 11:06:56');
 
 -- --------------------------------------------------------
 
@@ -413,13 +419,33 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `user_id`, `name`, `address`, `phone`, `email`, `password`, `role`, `created_at`, `profile_image`) VALUES
-(1, '1', 'Muhammad Ali', 'Malir cantt Karachi', '03132002769', 'alinarejo18@gmail.com', '$2y$10$MzPpY7E52bSIlTCT7M9ub.7qxzGehn0Fivr0E/K/c2Dmf20uhQtqS', 'user', '2026-08-18 17:55:30', '1787764589_Ali20.jpg'),
-(2, '2', 'Mateen', 'Malir cantt Karachi', '03132098778', 'mateen@gmail.com', '$2y$10$vmTv0yBop8TnY4OHXILKLuueUp6octByoOsQiWJc9K98WZYn.IVb.', 'user', '2026-08-25 04:06:42', '1787630865_ali-img.jfif'),
+(1, '1', 'Muhammad Ali', 'Malir cantt Karachi', '03132002769', 'alinarejo18@gmail.com', '$2y$10$MzPpY7E52bSIlTCT7M9ub.7qxzGehn0Fivr0E/K/c2Dmf20uhQtqS', 'user', '2026-08-18 17:55:30', '1789798184_ChatGPT Image Sep 15, 2026, 09_10_40 AM.png'),
+(2, '2', 'Mateen Ali Narejo', 'Malir cantt Karachi', '03132098778', 'mateen@gmail.com', '$2y$10$vmTv0yBop8TnY4OHXILKLuueUp6octByoOsQiWJc9K98WZYn.IVb.', 'user', '2026-08-25 04:06:42', '1789285948_Ali.DOC.jfif'),
 (3, '3', 'Asim', 'Malir cantt Karachi', '031328899', 'asim@gmail.com', '$2y$10$kimF9.DKs.EkbSd04LzHWOzqMQ6W0wG3AMUz8R1VZu7gtt0zEBVby', 'user', '2026-08-28 17:33:16', NULL),
 (4, '465721', 'Babar Azam', 'Karachi Sindh', '034566723498', 'babarazam@gmail.com', '$2y$10$uLezbM.riOUU/VcNNOAINO0GWsMwTEnz/.J2QTZWhrc/cSk2iK8F.', 'user', '2026-08-28 17:38:45', NULL),
 (5, 'USER_6a931b9975473', 'Abdul Rehman', 'Sanghar', '031612244537', 'abdulrehman1521596@gmail.com', '$2y$10$8u.GLBxkn2eZbCuRXM8TJO6DYOrAe64NXMz/19LrZ7IahRV1ih5he', 'user', '2026-08-29 17:49:13', '1788025866_company 3 sample 1.jpg'),
 (6, 'USER_6a931ce4ec458', 'Amna', 'Karchi', '0987765434', 'amna@gmail.com', '$2y$10$iSaVn.mP2fq4T75q76jCpegtPCkAdIAuwbSCoWhRdBhHWYG2mPAMC', 'user', '2026-08-29 17:54:44', NULL),
-(7, 'USER_6a95217fa2c08', 'fahad', 'Karachi', '03435637838', 'fahad@gmail.com', '$2y$10$Rh.sW7XrtxrdI6NxK6ph5ODVEv.YpVYb1OkgVdfMiPozkZafotGim', 'user', '2026-08-31 06:38:55', NULL);
+(7, 'USER_6a95217fa2c08', 'fahad', 'Karachi', '03435637838', 'fahad@gmail.com', '$2y$10$Rh.sW7XrtxrdI6NxK6ph5ODVEv.YpVYb1OkgVdfMiPozkZafotGim', 'user', '2026-08-31 06:38:55', NULL),
+(9, 'USER_6aad7849705fa', 'Ali', '32765481236hbsdv', '082316487932456', 'zeshan11@gmail.com', '$2y$10$XteWrukDp6.RFCxOsAO1luRUaopFXh7XgiSEr34o2Rs4ygROByseC', 'user', '2026-09-18 17:43:37', NULL),
+(10, 'USER_6aad7d970d227', 'Zubair Ali', 'Lahore', '+92 3143247472', 'alinarejo2121@gmail.com', '$2y$10$aqUrYadN.FNJdqMzhJ.z4OdD2U2uvU0adcTSmzxwQtoFsz8hnNGeC', 'user', '2026-09-18 18:06:15', NULL),
+(12, '40091615', 'Aman', 'islamabad', '+92 8934783778', 'aman@gmail.com', '$2y$10$8fFNHhZA/HH/DVJVMILGnuODKtxp1QibAuOkH/knqk4Xdc/k6MnLq', 'user', '2026-09-19 05:21:25', NULL),
+(13, '68995789', 'Aliii', 'khuch b', '+7 78732637296', 'aliiii@gmail.com', '$2y$10$GXCADyvl7nam7hxNO/RMluyuSbOV4/zYvMz40RyNbSffRUaAsOClG', 'user', '2026-09-19 05:25:05', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_profiles`
+--
+
+CREATE TABLE `user_profiles` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `date_of_birth` date DEFAULT NULL,
+  `gender` varchar(20) DEFAULT NULL,
+  `bio` text DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -605,6 +631,13 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_profile` (`user_id`);
+
+--
 -- Indexes for table `videos`
 --
 ALTER TABLE `videos`
@@ -642,13 +675,13 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `albums`
 --
 ALTER TABLE `albums`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `artists`
 --
 ALTER TABLE `artists`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `genres`
@@ -666,7 +699,7 @@ ALTER TABLE `languages`
 -- AUTO_INCREMENT for table `music`
 --
 ALTER TABLE `music`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `playlists`
@@ -678,25 +711,31 @@ ALTER TABLE `playlists`
 -- AUTO_INCREMENT for table `playlist_items`
 --
 ALTER TABLE `playlist_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `ratings`
 --
 ALTER TABLE `ratings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `videos`
@@ -757,6 +796,12 @@ ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`music_id`) REFERENCES `music` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_3` FOREIGN KEY (`video_id`) REFERENCES `videos` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  ADD CONSTRAINT `fk_user_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `videos`

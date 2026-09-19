@@ -855,8 +855,8 @@ $items_count = mysqli_num_rows($items_result);
                     <?php else: ?>
                         <div class="user-avatar" style="font-size:12px; color:#fff;"><?php echo strtoupper(substr($user_data['name'], 0, 1)); ?></div>
                     <?php endif; ?>
-                    <span style="font-weight:700; font-size:14px; margin-right:8px; white-space:nowrap; display:inline-block; vertical-align:middle; line-height:1;"><?php echo htmlspecialchars($user_data['name']); ?></span>
-                    <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
+                    <span class="user-menu-name">Edit Profile</span>
+                    <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.8;"></i>
                 </div>
             </div>
         </div>

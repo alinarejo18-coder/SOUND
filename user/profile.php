@@ -28,13 +28,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $email = trim($_POST['email'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
         $address = trim($_POST['address'] ?? '');
+        $date_of_birth = trim($_POST['date_of_birth'] ?? '');
+        $gender = trim($_POST['gender'] ?? '');
+        $bio = trim($_POST['bio'] ?? '');
+        $country = trim($_POST['country'] ?? '');
+        $city = trim($_POST['city'] ?? '');
 
         if (empty($name) || empty($email)) {
             $error = "Name and Email are required.";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "Invalid email format.";
         } else {
-            // Check if email already exists for another user
             $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE email = ? AND id != ?");
             mysqli_stmt_bind_param($check_stmt, "si", $email, $user_id);
             mysqli_stmt_execute($check_stmt);
@@ -42,18 +46,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (mysqli_stmt_num_rows($check_stmt) > 0) {
                 $error = "Email is already in use.";
             } else {
-                $update_stmt = mysqli_prepare($conn, "UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?");
-                mysqli_stmt_bind_param($update_stmt, "ssssi", $name, $email, $phone, $address, $user_id);
-                if (mysqli_stmt_execute($update_stmt)) {
-                    $_SESSION['name'] = $name; // Update session name
-                    $message = "Profile updated successfully.";
+                $user_update_stmt = mysqli_prepare($conn, "UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?");
+                mysqli_stmt_bind_param($user_update_stmt, "ssssi", $name, $email, $phone, $address, $user_id);
+
+                if (mysqli_stmt_execute($user_update_stmt)) {
+                    $_SESSION['name'] = $name;
+                    $profile_date = ($date_of_birth === '') ? null : $date_of_birth;
+
+                    $profile_check_stmt = mysqli_prepare($conn, "SELECT id FROM user_profiles WHERE user_id = ?");
+                    mysqli_stmt_bind_param($profile_check_stmt, "i", $user_id);
+                    mysqli_stmt_execute($profile_check_stmt);
+                    mysqli_stmt_store_result($profile_check_stmt);
+
+                    if (mysqli_stmt_num_rows($profile_check_stmt) > 0) {
+                        $profile_update_stmt = mysqli_prepare($conn, "UPDATE user_profiles SET date_of_birth = ?, gender = ?, bio = ?, country = ?, city = ? WHERE user_id = ?");
+                        mysqli_stmt_bind_param($profile_update_stmt, "sssssi", $profile_date, $gender, $bio, $country, $city, $user_id);
+                        $profile_success = mysqli_stmt_execute($profile_update_stmt);
+                    } else {
+                        $profile_insert_stmt = mysqli_prepare($conn, "INSERT INTO user_profiles (user_id, date_of_birth, gender, bio, country, city) VALUES (?, ?, ?, ?, ?, ?)");
+                        mysqli_stmt_bind_param($profile_insert_stmt, "isssss", $user_id, $profile_date, $gender, $bio, $country, $city);
+                        $profile_success = mysqli_stmt_execute($profile_insert_stmt);
+                    }
+
+                    if ($profile_success) {
+                        $message = "Profile updated successfully.";
+                    } else {
+                        $error = "Failed to update profile.";
+                    }
                 } else {
                     $error = "Failed to update profile.";
                 }
             }
         }
 
-        // Handle image upload if a file was provided
         if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
             $upload_dir = '../uploads/users/';
             if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
@@ -88,6 +113,14 @@ $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE id = ?");
 mysqli_stmt_bind_param($stmt, "i", $user_id);
 mysqli_stmt_execute($stmt);
 $user_data = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+
+$profile_stmt = mysqli_prepare($conn, "SELECT * FROM user_profiles WHERE user_id = ? LIMIT 1");
+mysqli_stmt_bind_param($profile_stmt, "i", $user_id);
+mysqli_stmt_execute($profile_stmt);
+$profile_data = mysqli_fetch_assoc(mysqli_stmt_get_result($profile_stmt));
+if (!$profile_data) {
+    $profile_data = [];
+}
 
 $current_page = 'profile';
 
@@ -329,6 +362,36 @@ $site_info = mysqli_fetch_assoc($site_info_query);
                     <div class="form-group">
                         <label>Address</label>
                         <input type="text" name="address" value="<?php echo htmlspecialchars($user_data['address'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" name="date_of_birth" value="<?php echo htmlspecialchars($profile_data['date_of_birth'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select name="gender" style="width: 100%; padding: 12px 16px; background: #282828; border: 1px solid #333; border-radius: 8px; color: var(--text-primary); font-size: 15px; transition: all 0.3s;">
+                            <option value="" <?php echo empty($profile_data['gender'] ?? '') ? 'selected' : ''; ?>>Select</option>
+                            <option value="Male" <?php echo (($profile_data['gender'] ?? '') === 'Male') ? 'selected' : ''; ?>>Male</option>
+                            <option value="Female" <?php echo (($profile_data['gender'] ?? '') === 'Female') ? 'selected' : ''; ?>>Female</option>
+                            <option value="Other" <?php echo (($profile_data['gender'] ?? '') === 'Other') ? 'selected' : ''; ?>>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea name="bio" rows="4" style="width: 100%; padding: 12px 16px; background: #282828; border: 1px solid #333; border-radius: 8px; color: var(--text-primary); font-size: 15px; resize: vertical; transition: all 0.3s;"><?php echo htmlspecialchars($profile_data['bio'] ?? ''); ?></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Country</label>
+                        <input type="text" name="country" value="<?php echo htmlspecialchars($profile_data['country'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" name="city" value="<?php echo htmlspecialchars($profile_data['city'] ?? ''); ?>">
                     </div>
 
                     <div style="margin-top: 40px;">

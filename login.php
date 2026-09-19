@@ -373,14 +373,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             clearFieldError(loginInput);
             clearFieldError(passwordInput);
 
-            if (!loginInput.value.trim()) {
+            const loginValue = loginInput.value.trim();
+
+            if (!loginValue) {
                 setFieldError(loginInput, 'User ID or Email is required.');
                 isValid = false;
-            } else if (loginInput.value.trim().length < 4) {
+            } else if (!/^(?:[A-Za-z0-9_@.-]+|[^\s@]+@[^\s@]+\.[^\s@]+)$/.test(loginValue)) {
                 setFieldError(loginInput, 'Please enter a valid User ID or Email.');
-                isValid = false;
-            } else if (!/^[A-Za-z0-9_@.-]+$/.test(loginInput.value.trim()) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginInput.value.trim())) {
-                setFieldError(loginInput, 'Use letters, numbers, underscore, dot, or a valid email format.');
                 isValid = false;
             }
 

@@ -11,8 +11,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name     = trim($_POST["name"]);
     $address  = trim($_POST["address"]);
     $country_code = trim($_POST["country_code"] ?? "");
-    $phone    = trim($_POST["phone"]);
-    $phone    = ($country_code !== "" && $phone !== "") ? $country_code . " " . $phone : $phone;
+    $phone    = trim($_POST["phone"] ?? "");
+
+    if ($country_code !== "" && $phone !== "") {
+        $prefixPattern = preg_quote($country_code, '/');
+        $phone = preg_replace('/^' . $prefixPattern . '\s*/', '', $phone);
+        $phone = $country_code . ' ' . $phone;
+    }
+
     $email    = trim($_POST["email"]);
     $password = $_POST["password"];
     $confirm_password = $_POST["confirm_password"] ?? "";
@@ -347,11 +353,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
 
             .phone-input-wrap {
-                flex-direction: column;
+                flex-direction: row;
+                align-items: center;
             }
 
             .phone-input-wrap .country-code-select {
-                width: 100%;
+                width: 110px;
+                min-width: 110px;
+                flex: 0 0 110px;
+            }
+
+            .phone-input-wrap .phone-input {
+                flex: 1;
+                min-width: 0;
             }
         }
     </style>
@@ -554,6 +568,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         return selected ? selected.code : null;
     }
 
+    function formatPhoneWithCountryCode(phoneInput, countrySelect) {
+        const selectedCode = countrySelect.value;
+        if (!selectedCode) return;
+
+        const rawValue = phoneInput.value || '';
+        const digitsOnly = rawValue.replace(/\D/g, '');
+        if (!digitsOnly) {
+            phoneInput.value = selectedCode + ' ';
+            return;
+        }
+
+        const currentPrefix = selectedCode + ' ';
+        if (rawValue.startsWith(currentPrefix)) {
+            phoneInput.value = rawValue;
+            return;
+        }
+
+        const previousPrefix = phoneInput.dataset.previousPrefix || '';
+        const cleanedValue = previousPrefix && rawValue.startsWith(previousPrefix)
+            ? rawValue.slice(previousPrefix.length)
+            : rawValue.replace(new RegExp('^\\+\\d+\\s*'), '');
+
+        phoneInput.dataset.previousPrefix = currentPrefix;
+        phoneInput.value = currentPrefix + cleanedValue.replace(/\D/g, '');
+    }
+
     function setFieldError(input, message) {
         const fieldError = document.querySelector('[data-error-for="' + input.name + '"]');
         input.classList.add('error');
@@ -610,12 +650,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         if (name === 'phone') {
-            if (!value) {
+            const selectedCode = registerForm.querySelector('[name="country_code"]').value;
+            const phoneWithoutCode = selectedCode && value.startsWith(selectedCode)
+                ? value.slice(selectedCode.length).trim()
+                : value;
+            const normalizedValue = phoneWithoutCode.replace(/\D/g, '');
+
+            if (!normalizedValue) {
                 setFieldError(input, 'Phone number is required.');
                 return false;
             }
 
-            const selectedCode = registerForm.querySelector('[name="country_code"]').value;
             const countryRules = {
                 '+1': { min: 10, max: 10 },
                 '+7': { min: 11, max: 11 },
@@ -653,22 +698,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             const rule = countryRules[selectedCode] || { min: 7, max: 15 };
 
-            if (!/^[0-9]+$/.test(value)) {
-                setFieldError(input, 'Phone number must contain digits only.');
-                return false;
-            }
-
-            if (value.length > rule.max) {
-                const fieldError = document.querySelector('[data-error-for="phone"]');
-                setFieldError(input, 'Too many digits for the selected country code.');
-                if (fieldError) {
-                    fieldError.style.color = '#FCA5A5';
-                }
-                return false;
-            }
-
-            if (value.length < rule.min) {
-                setFieldError(input, 'Phone number is too short for the selected country code.');
+            if (normalizedValue.length < rule.min || normalizedValue.length > rule.max) {
+                setFieldError(input, 'Phone number length must be between ' + rule.min + ' and ' + rule.max + ' digits.');
                 return false;
             }
         }
@@ -753,19 +784,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         input.addEventListener('input', function () {
             if (fieldName === 'phone') {
                 const phoneInput = this;
-                const detectedCode = detectCountryCode(phoneInput.value);
                 const countrySelect = registerForm.querySelector('[name="country_code"]');
 
-                if (countrySelect.value === '') {
+                if (countrySelect.value) {
+                    formatPhoneWithCountryCode(phoneInput, countrySelect);
+                } else {
+                    const detectedCode = detectCountryCode(phoneInput.value);
                     if (detectedCode) {
                         countrySelect.value = detectedCode;
                         clearFieldError(countrySelect);
+                        formatPhoneWithCountryCode(phoneInput, countrySelect);
                     } else {
-                        setFieldError(countrySelect, 'Please select a country code first.');
+                        phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 15);
                     }
-                } else if (detectedCode && countrySelect.value !== detectedCode) {
-                    countrySelect.value = detectedCode;
-                    clearFieldError(countrySelect);
                 }
             }
 
@@ -773,6 +804,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 validateField(this);
             }
         });
+    });
+
+    const countrySelect = registerForm.querySelector('[name="country_code"]');
+    countrySelect.addEventListener('change', function () {
+        const phoneInput = registerForm.querySelector('[name="phone"]');
+        if (this.value && phoneInput.value) {
+            formatPhoneWithCountryCode(phoneInput, this);
+        } else if (this.value) {
+            phoneInput.value = this.value + ' ';
+            phoneInput.dataset.previousPrefix = this.value + ' ';
+        }
     });
 
     registerForm.addEventListener('submit', function (event) {

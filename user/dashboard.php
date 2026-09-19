@@ -281,20 +281,34 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
         
         .user-menu {
             display: flex; align-items: center; gap: 8px;
-            background: rgba(0,0,0,0.5);
-            padding: 4px 16px 4px 4px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(52, 211, 153, 0.14));
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 6px 14px 6px 6px;
             border-radius: 500px;
             cursor: pointer;
             white-space: nowrap;
             flex-shrink: 0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.18);
         }
-        .user-menu:hover { background: rgba(0,0,0,0.8); }
+        .user-menu:hover {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.32), rgba(52, 211, 153, 0.18));
+            border-color: rgba(255,255,255,0.22);
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+        }
         .user-avatar {
             width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
             background: #333; display:flex; align-items:center; justify-content:center;
             flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.12);
         }
-        .user-menu-name { font-weight:700; font-size:14px; margin-right:8px; }
+        .user-menu-name {
+            font-weight:700; font-size:13px; margin-right:4px;
+            letter-spacing: 0.2px;
+            color: #f8fafc;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
 
         .profile-header {
             padding: 24px;
@@ -749,15 +763,15 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
             </div>
             
             <div class="top-nav-right">
-                <div class="user-menu" id="profileBtn">
+                <a href="profile.php" class="user-menu" id="profileBtn" style="text-decoration:none; display:flex; align-items:center; gap:8px;">
                     <?php if ($user_data['profile_image']): ?>
                         <img src="../uploads/users/<?php echo htmlspecialchars($user_data['profile_image']); ?>" class="user-avatar" alt="Avatar">
                     <?php else: ?>
                         <div class="user-avatar" style="font-size:12px; color:#fff;"><?php echo strtoupper(substr($user_data['name'], 0, 1)); ?></div>
                     <?php endif; ?>
-                    <span class="user-menu-name"><?php echo htmlspecialchars($user_data['name']); ?></span>
-                    <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
-                </div>
+                    <span class="user-menu-name">Edit Profile</span>
+                    <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.8;"></i>
+                </a>
             </div>
         </div>
         
@@ -929,6 +943,10 @@ $public_playlists_result = mysqli_query($conn, $public_playlists_query);
     <a href="profile.php" class="active">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         Profile
+    </a>
+    <a href="../logout.php">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Logout
     </a>
 </nav>
 
