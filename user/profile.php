@@ -3,25 +3,71 @@ require_once "../includes/auth.php";
 require_once "../config/db.php";
 requireUser();
 
-$user_id = $_SESSION['user_id'];
+$user_id = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 $message = "";
 $error = "";
+
+function fetchAssocFromStatement($stmt)
+{
+    if (!$stmt) {
+        return null;
+    }
+
+    if (function_exists('mysqli_stmt_get_result')) {
+        $result = mysqli_stmt_get_result($stmt);
+        if ($result === false) {
+            return null;
+        }
+        return mysqli_fetch_assoc($result);
+    }
+
+    if (!mysqli_stmt_store_result($stmt)) {
+        return null;
+    }
+
+    $meta = mysqli_stmt_result_metadata($stmt);
+    if (!$meta) {
+        return null;
+    }
+
+    $fields = $meta->fetch_fields();
+    $binds = [];
+    foreach ($fields as $field) {
+        $binds[] = &$row[$field->name];
+    }
+
+    if (!mysqli_stmt_bind_result($stmt, ...$binds)) {
+        return null;
+    }
+
+    if (!mysqli_stmt_fetch($stmt)) {
+        return null;
+    }
+
+    return $row;
+}
 
 // Handle Profile Updates
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'delete_image') {
         $stmt = mysqli_prepare($conn, "SELECT profile_image FROM users WHERE id = ?");
-        mysqli_stmt_bind_param($stmt, "i", $user_id);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-        if ($result && $result['profile_image']) {
-            $file_path = "../uploads/users/" . $result['profile_image'];
-            if (file_exists($file_path)) unlink($file_path);
-            
-            $stmt = mysqli_prepare($conn, "UPDATE users SET profile_image = NULL WHERE id = ?");
-            mysqli_stmt_bind_param($stmt, "i", $user_id);
-            mysqli_stmt_execute($stmt);
-            $message = "Profile image removed successfully.";
+        if ($stmt && mysqli_stmt_bind_param($stmt, "i", $user_id) && mysqli_stmt_execute($stmt)) {
+            $result = fetchAssocFromStatement($stmt);
+            if ($result && !empty($result['profile_image'])) {
+                $file_path = "../uploads/users/" . $result['profile_image'];
+                if (file_exists($file_path)) {
+                    unlink($file_path);
+                }
+
+                $update_stmt = mysqli_prepare($conn, "UPDATE users SET profile_image = NULL WHERE id = ?");
+                if ($update_stmt && mysqli_stmt_bind_param($update_stmt, "i", $user_id) && mysqli_stmt_execute($update_stmt)) {
+                    $message = "Profile image removed successfully.";
+                } else {
+                    $error = "Failed to remove profile image.";
+                }
+            }
+        } else {
+            $error = "Failed to load profile image.";
         }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'update_profile') {
         $name = trim($_POST['name'] ?? '');
@@ -40,68 +86,83 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $error = "Invalid email format.";
         } else {
             $check_stmt = mysqli_prepare($conn, "SELECT id FROM users WHERE email = ? AND id != ?");
-            mysqli_stmt_bind_param($check_stmt, "si", $email, $user_id);
-            mysqli_stmt_execute($check_stmt);
-            mysqli_stmt_store_result($check_stmt);
-            if (mysqli_stmt_num_rows($check_stmt) > 0) {
-                $error = "Email is already in use.";
-            } else {
-                $user_update_stmt = mysqli_prepare($conn, "UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?");
-                mysqli_stmt_bind_param($user_update_stmt, "ssssi", $name, $email, $phone, $address, $user_id);
+            if ($check_stmt && mysqli_stmt_bind_param($check_stmt, "si", $email, $user_id) && mysqli_stmt_execute($check_stmt)) {
+                mysqli_stmt_store_result($check_stmt);
+                if (mysqli_stmt_num_rows($check_stmt) > 0) {
+                    $error = "Email is already in use.";
+                } else {
+                    $user_update_stmt = mysqli_prepare($conn, "UPDATE users SET name = ?, email = ?, phone = ?, address = ? WHERE id = ?");
+                    if ($user_update_stmt && mysqli_stmt_bind_param($user_update_stmt, "ssssi", $name, $email, $phone, $address, $user_id) && mysqli_stmt_execute($user_update_stmt)) {
+                        $_SESSION['name'] = $name;
+                        $profile_date = ($date_of_birth === '') ? null : $date_of_birth;
 
-                if (mysqli_stmt_execute($user_update_stmt)) {
-                    $_SESSION['name'] = $name;
-                    $profile_date = ($date_of_birth === '') ? null : $date_of_birth;
+                        $profile_check_stmt = mysqli_prepare($conn, "SELECT id FROM user_profiles WHERE user_id = ?");
+                        if ($profile_check_stmt && mysqli_stmt_bind_param($profile_check_stmt, "i", $user_id) && mysqli_stmt_execute($profile_check_stmt)) {
+                            mysqli_stmt_store_result($profile_check_stmt);
+                            $has_profile = mysqli_stmt_num_rows($profile_check_stmt) > 0;
 
-                    $profile_check_stmt = mysqli_prepare($conn, "SELECT id FROM user_profiles WHERE user_id = ?");
-                    mysqli_stmt_bind_param($profile_check_stmt, "i", $user_id);
-                    mysqli_stmt_execute($profile_check_stmt);
-                    mysqli_stmt_store_result($profile_check_stmt);
+                            if ($has_profile) {
+                                $profile_update_stmt = mysqli_prepare($conn, "UPDATE user_profiles SET date_of_birth = ?, gender = ?, bio = ?, country = ?, city = ? WHERE user_id = ?");
+                                if ($profile_update_stmt && mysqli_stmt_bind_param($profile_update_stmt, "sssssi", $profile_date, $gender, $bio, $country, $city, $user_id) && mysqli_stmt_execute($profile_update_stmt)) {
+                                    $profile_success = true;
+                                } else {
+                                    $profile_success = false;
+                                }
+                            } else {
+                                $profile_insert_stmt = mysqli_prepare($conn, "INSERT INTO user_profiles (user_id, date_of_birth, gender, bio, country, city) VALUES (?, ?, ?, ?, ?, ?)");
+                                if ($profile_insert_stmt && mysqli_stmt_bind_param($profile_insert_stmt, "isssss", $user_id, $profile_date, $gender, $bio, $country, $city) && mysqli_stmt_execute($profile_insert_stmt)) {
+                                    $profile_success = true;
+                                } else {
+                                    $profile_success = false;
+                                }
+                            }
 
-                    if (mysqli_stmt_num_rows($profile_check_stmt) > 0) {
-                        $profile_update_stmt = mysqli_prepare($conn, "UPDATE user_profiles SET date_of_birth = ?, gender = ?, bio = ?, country = ?, city = ? WHERE user_id = ?");
-                        mysqli_stmt_bind_param($profile_update_stmt, "sssssi", $profile_date, $gender, $bio, $country, $city, $user_id);
-                        $profile_success = mysqli_stmt_execute($profile_update_stmt);
-                    } else {
-                        $profile_insert_stmt = mysqli_prepare($conn, "INSERT INTO user_profiles (user_id, date_of_birth, gender, bio, country, city) VALUES (?, ?, ?, ?, ?, ?)");
-                        mysqli_stmt_bind_param($profile_insert_stmt, "isssss", $user_id, $profile_date, $gender, $bio, $country, $city);
-                        $profile_success = mysqli_stmt_execute($profile_insert_stmt);
-                    }
-
-                    if ($profile_success) {
-                        $message = "Profile updated successfully.";
+                            if ($profile_success) {
+                                $message = "Profile updated successfully.";
+                            } else {
+                                $error = "Failed to update profile.";
+                            }
+                        } else {
+                            $error = "Failed to update profile details.";
+                        }
                     } else {
                         $error = "Failed to update profile.";
                     }
-                } else {
-                    $error = "Failed to update profile.";
                 }
+            } else {
+                $error = "Failed to validate email.";
             }
         }
 
         if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
             $upload_dir = '../uploads/users/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
-            
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+
             $file_name = time() . '_' . basename($_FILES["profile_image"]["name"]);
             $target_file = $upload_dir . $file_name;
             if (move_uploaded_file($_FILES["profile_image"]["tmp_name"], $target_file)) {
                 $stmt = mysqli_prepare($conn, "SELECT profile_image FROM users WHERE id = ?");
-                mysqli_stmt_bind_param($stmt, "i", $user_id);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-                if ($result && $result['profile_image']) {
-                    $old_file = $upload_dir . $result['profile_image'];
-                    if (file_exists($old_file)) unlink($old_file);
+                if ($stmt && mysqli_stmt_bind_param($stmt, "i", $user_id) && mysqli_stmt_execute($stmt)) {
+                    $result = fetchAssocFromStatement($stmt);
+                    if ($result && !empty($result['profile_image'])) {
+                        $old_file = $upload_dir . $result['profile_image'];
+                        if (file_exists($old_file)) {
+                            unlink($old_file);
+                        }
+                    }
                 }
-                $stmt = mysqli_prepare($conn, "UPDATE users SET profile_image = ? WHERE id = ?");
-                mysqli_stmt_bind_param($stmt, "si", $file_name, $user_id);
-                if(mysqli_stmt_execute($stmt)){
-                    if(empty($message)) {
+
+                $update_stmt = mysqli_prepare($conn, "UPDATE users SET profile_image = ? WHERE id = ?");
+                if ($update_stmt && mysqli_stmt_bind_param($update_stmt, "si", $file_name, $user_id) && mysqli_stmt_execute($update_stmt)) {
+                    if (empty($message)) {
                         $message = "Profile image updated successfully.";
                     } else {
                         $message .= " Image updated as well.";
                     }
+                } else {
+                    $error = "Failed to update profile image.";
                 }
             }
         }
@@ -110,21 +171,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Fetch user data
 $stmt = mysqli_prepare($conn, "SELECT * FROM users WHERE id = ?");
-mysqli_stmt_bind_param($stmt, "i", $user_id);
-mysqli_stmt_execute($stmt);
-$user_data = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+if ($stmt && mysqli_stmt_bind_param($stmt, "i", $user_id) && mysqli_stmt_execute($stmt)) {
+    $user_data = fetchAssocFromStatement($stmt);
+} else {
+    $user_data = [];
+}
 
 $profile_stmt = mysqli_prepare($conn, "SELECT * FROM user_profiles WHERE user_id = ? LIMIT 1");
-mysqli_stmt_bind_param($profile_stmt, "i", $user_id);
-mysqli_stmt_execute($profile_stmt);
-$profile_data = mysqli_fetch_assoc(mysqli_stmt_get_result($profile_stmt));
+if ($profile_stmt && mysqli_stmt_bind_param($profile_stmt, "i", $user_id) && mysqli_stmt_execute($profile_stmt)) {
+    $profile_data = fetchAssocFromStatement($profile_stmt);
+} else {
+    $profile_data = [];
+}
 if (!$profile_data) {
     $profile_data = [];
 }
 
-$current_page = 'profile';
-
-// Fetch genres for navbar dropdown
 $nav_genres = [];
 $nav_genre_q = mysqli_query($conn, "SELECT * FROM genres ORDER BY genre_name ASC");
 if ($nav_genre_q) {
@@ -133,8 +195,13 @@ if ($nav_genre_q) {
     }
 }
 
+$site_info = [];
 $site_info_query = mysqli_query($conn, "SELECT * FROM website_info LIMIT 1");
-$site_info = mysqli_fetch_assoc($site_info_query);
+if ($site_info_query) {
+    $site_info = mysqli_fetch_assoc($site_info_query);
+}
+
+$current_page = 'profile';
 ?>
 <!DOCTYPE html>
 <html lang="en">
